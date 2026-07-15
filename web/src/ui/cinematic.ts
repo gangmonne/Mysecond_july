@@ -11,6 +11,8 @@
  * 그레인은 전시장 GPU 를 배려해 ~15fps 저해상도로만 그린다.
  */
 
+import { FloatingCaption } from "./words";
+
 type Mood = "idle" | "talk" | "gesture";
 
 export class Cinematic {
@@ -19,11 +21,10 @@ export class Cinematic {
   private raf = 0;
   private lastGrain = 0;
   private buf: ImageData;
-  private caption: HTMLElement;
-  private clearTimer = 0;
+  private words: FloatingCaption;
 
   constructor(private stage: HTMLElement, caption: HTMLElement) {
-    this.caption = caption;
+    this.words = new FloatingCaption(caption);
 
     const aura = div("cine-aura");
     const grade = div("cine-grade");
@@ -57,18 +58,13 @@ export class Cinematic {
     this.stage.dataset.mood = mood;
   }
 
-  /** 자막: 흐릿하게 떠오른다. holdMs 뒤 늦게 사라진다 */
+  /** 말: 허공에 떠올랐다 한 단어씩 증발한다 (휘발되는 언어) */
   say(text: string, holdMs: number) {
-    clearTimeout(this.clearTimer);
-    this.caption.textContent = text;
-    // 리플로우 강제 후 클래스 — transition 이 매번 다시 걸리도록
-    void this.caption.offsetWidth;
-    this.caption.classList.add("show");
-    this.clearTimer = window.setTimeout(() => this.clear(), holdMs);
+    this.words.say(text, holdMs);
   }
 
   clear() {
-    this.caption.classList.remove("show");
+    this.words.clear();
   }
 
   private resize() {
@@ -100,7 +96,7 @@ export class Cinematic {
 
   dispose() {
     cancelAnimationFrame(this.raf);
-    clearTimeout(this.clearTimer);
+    this.words.clear(true);
   }
 }
 

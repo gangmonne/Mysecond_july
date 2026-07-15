@@ -1,0 +1,9 @@
+{
+  "_comment": "몸(클립뱅크)의 소스 매핑. poster 는 클립이 없을 때 깔리는 얼굴, clips 는 상태별 소스 URL. 지금은 Higgsfield 로 생성한 플레이스홀더(동양인 여성·안경). 전시에선 UE 시퀀서 렌더 webm 을 /clips/ 에 내려받아 아래 URL 을 로컬 경로로 바꾼다. CDN URL 은 임시라 만료될 수 있다.",
+  "poster": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_111557_b4d118b6-44b6-4d43-8cb8-e596b20e1703.png",
+  "clips": {
+    "idle_a": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_112135_a79d50a2-a5f3-42f8-a94a-a73a56c333bd.mp4",
+    "idle_b": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_112135_a79d50a2-a5f3-42f8-a94a-a73a56c333bd.mp4",
+    "idle_c": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_112135_a79d50a2-a5f3-42f8-a94a-a73a56c333bd.mp4"
+  }
+}

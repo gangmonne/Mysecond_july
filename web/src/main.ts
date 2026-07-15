@@ -16,7 +16,7 @@ import type { SignalEvent, Signal } from "@contract/contract";
 import { SignalCapture } from "./capture/signals";
 import { MirrorDirector } from "./director/mirror";
 import { mulberry32 } from "./director/rng";
-import { ClipBankRenderer, type Renderer } from "./renderer/clipbank";
+import { ClipBankRenderer, type Renderer, type ClipManifest } from "./renderer/clipbank";
 import { PixelStreamRenderer } from "./renderer/pixelstream";
 import { respond, SECOND_PROFILE } from "./brain/persona";
 import { startSTT, type STTHandle } from "./brain/stt";
@@ -53,6 +53,17 @@ export function log(line: string) {
   envelope.scrollTop = envelope.scrollHeight;
 }
 
+/* ── 클립 매니페스트 (포스터/클립 URL, 선택) — 없으면 자리표시로 굴린다 ── */
+const clipManifest: ClipManifest = await loadManifest();
+async function loadManifest(): Promise<ClipManifest> {
+  try {
+    const r = await fetch("/clips/manifest.json", { signal: AbortSignal.timeout(3000) });
+    return r.ok ? ((await r.json()) as ClipManifest) : {};
+  } catch {
+    return {};
+  }
+}
+
 /* ── 시네마틱 레이어 ── */
 const cinematic = new Cinematic(stage, caption);
 
@@ -82,7 +93,7 @@ let renderer: Renderer = streamUrl
 if (streamUrl) renderer.setSpeakingListener(onSpeaking);
 
 function makeClipBank(): Renderer {
-  const r = new ClipBankRenderer(bodyEl, mulberry32(seed ^ 0x9e3779b9));
+  const r = new ClipBankRenderer(bodyEl, mulberry32(seed ^ 0x9e3779b9), clipManifest);
   r.setSpeakingListener(onSpeaking);
   return r;
 }

@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 const contractDir = fileURLToPath(new URL("../contract", import.meta.url));
 
 export default defineConfig({
+  // 최상위 await(매니페스트 로드) 를 위해 모던 타깃. 전시 브라우저는 최신 Chromium 이다.
+  build: { target: "esnext" },
+  esbuild: { target: "esnext" },
   resolve: {
     alias: {
       "@contract": contractDir,

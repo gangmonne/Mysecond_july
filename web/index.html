@@ -82,17 +82,15 @@
         50% { transform: translateX(calc((var(--tb, 0) + 0.4) * 2px)) scaleX(1.003); }
       }
 
-      /* ── 자막 — 시네마틱 타이포 ──────────────────────────────── */
+      /* ── 자막 — 허공에 떠도는 휘발되는 언어 (words.ts 가 토큰을 흩뿌린다) ── */
       #caption {
-        position: absolute; left: 0; right: 0; bottom: 13vh; z-index: 6;
-        text-align: center; padding: 0 12vw; pointer-events: none;
-        font-size: clamp(17px, 2.15vw, 27px); font-weight: 300; line-height: 1.65;
+        position: absolute; inset: 0; z-index: 6; pointer-events: none;
+        font-size: clamp(17px, 2.15vw, 27px); font-weight: 300;
         letter-spacing: 0.02em; color: var(--ink);
-        text-shadow: 0 1px 20px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
-        opacity: 0; transform: translateY(6px); filter: blur(6px);
-        transition: opacity 900ms ease, transform 900ms ease, filter 900ms ease;
       }
-      #caption.show { opacity: 1; transform: none; filter: none; }
+      #caption .float-word {
+        text-shadow: 0 1px 24px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9);
+      }
 
       #clock {
         position: absolute; right: 18px; top: 16px; z-index: 6; pointer-events: none;

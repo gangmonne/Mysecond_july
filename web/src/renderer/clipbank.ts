@@ -23,6 +23,17 @@ export interface Renderer {
   setSpeakingListener(cb: (speaking: boolean) => void): void;
 }
 
+/**
+ * 클립 매니페스트 (web/public/clips/manifest.json 로 주입, 선택).
+ *   poster : 클립이 없을 때 몸의 기본 얼굴로 깔리는 정지 이미지 (URL 가능)
+ *   clips  : 상태명 → 소스 URL 매핑. 없으면 `/clips/{state}.webm` 규약 경로로 떨어진다
+ * 원격 URL(예: 사전 렌더 CDN)도 그대로 쓸 수 있다 — 전시에선 로컬 파일 권장.
+ */
+export interface ClipManifest {
+  poster?: string;
+  clips?: Record<string, string>;
+}
+
 type State =
   | { kind: "idle" }
   | { kind: "talk" }
@@ -40,12 +51,29 @@ export class ClipBankRenderer implements Renderer {
   private speakingCb: (s: boolean) => void = () => {};
   private queue: (() => void)[] = [];
   private rng: () => number;
+  private manifest: ClipManifest;
+  private poster?: HTMLImageElement;
 
   /** rng: 시드 가능한 난수 (규약 — idle 클립 선택까지 재현 가능해야 한다) */
-  constructor(root: HTMLElement, rng: () => number = Math.random) {
+  constructor(root: HTMLElement, rng: () => number = Math.random, manifest: ClipManifest = {}) {
     this.root = root;
     this.rng = rng;
+    this.manifest = manifest;
     root.style.position = "relative";
+
+    // 포스터 — 클립이 없어도 몸엔 얼굴이 있다. 영상 레이어가 그 위를 덮는다
+    if (manifest.poster) {
+      const img = document.createElement("img");
+      img.src = manifest.poster;
+      Object.assign(img.style, {
+        position: "absolute", inset: "0", width: "100%", height: "100%",
+        objectFit: "cover", opacity: "0", transition: "opacity 900ms ease", zIndex: "0",
+      });
+      img.onload = () => { img.style.opacity = "1"; };
+      root.appendChild(img);
+      this.poster = img;
+    }
+
     this.layers = [document.createElement("video"), document.createElement("video")] as const as [
       HTMLVideoElement, HTMLVideoElement,
     ];
@@ -53,7 +81,7 @@ export class ClipBankRenderer implements Renderer {
       Object.assign(v, { muted: true, playsInline: true });
       Object.assign(v.style, {
         position: "absolute", inset: "0", width: "100%", height: "100%",
-        objectFit: "cover", transition: "opacity 480ms ease", opacity: "0",
+        objectFit: "cover", transition: "opacity 480ms ease", opacity: "0", zIndex: "1",
       });
       root.appendChild(v);
     }
@@ -61,9 +89,15 @@ export class ClipBankRenderer implements Renderer {
     Object.assign(this.placeholder.style, {
       position: "absolute", inset: "0", display: "flex", alignItems: "center",
       justifyContent: "center", color: "#8C8072", fontSize: "13px", letterSpacing: "0.12em",
+      zIndex: "2",
     });
     root.appendChild(this.placeholder);
     this.idle();
+  }
+
+  /** 상태명 → 소스 URL. 매니페스트 우선, 없으면 규약 경로 */
+  private clipUrl(clip: string): string {
+    return this.manifest.clips?.[clip] ?? `/clips/${clip}.webm`;
   }
 
   setSpeakingListener(cb: (s: boolean) => void) { this.speakingCb = cb; }
@@ -122,16 +156,16 @@ export class ClipBankRenderer implements Renderer {
 
   private play(clip: string, opt: { loop?: boolean; rate?: number; onEnd?: () => void } = {}) {
     const back = this.layers[1 - this.front];
-    const src = `/clips/${clip}.webm`;
     back.loop = !!opt.loop;
     back.playbackRate = opt.rate ?? 1;
     back.onended = opt.onEnd ? () => opt.onEnd!() : null;
     back.onerror = () => {
-      // 클립이 아직 없다 — 자리표시로 상태만 노출하고 파이프라인은 계속 굴린다
-      this.placeholder.textContent = `[ ${clip} ]`;
+      // 클립이 없다 — 포스터(얼굴)가 있으면 그 위로 물러나고, 없으면 상태명만 노출한다
+      back.style.opacity = "0";
+      if (!this.poster) this.placeholder.textContent = `[ ${clip} ]`;
       if (opt.onEnd) setTimeout(opt.onEnd, 1600);
     };
-    back.src = src;
+    back.src = this.clipUrl(clip);
     back.play().catch(() => {});
     back.style.opacity = "1";
     this.layers[this.front].style.opacity = "0";
