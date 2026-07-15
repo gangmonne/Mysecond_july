@@ -16,11 +16,25 @@
 import { FaceLandmarker, PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import type { SignalEvent, Signal } from "@contract/contract";
 
-const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-const FACE_MODEL =
+/* 전시장 인터넷을 신뢰하지 않는다 — 로컬(public/) 우선, CDN 은 폴백 */
+const WASM_LOCAL = "/vendor/mediapipe-wasm"; // postinstall 이 npm 패키지에서 복사
+const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+const FACE_MODEL_LOCAL = "/models/face_landmarker.task";
+const FACE_MODEL_CDN =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const POSE_MODEL =
+const POSE_MODEL_LOCAL = "/models/pose_landmarker_lite.task";
+const POSE_MODEL_CDN =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+
+async function firstReachable(local: string, probe: string, cdn: string): Promise<string> {
+  try {
+    const r = await fetch(probe, { method: "HEAD" });
+    // dev 서버의 SPA 폴백(HTML 200)에 속지 않는다 — 진짜 파일일 때만 로컬
+    const html = (r.headers.get("content-type") ?? "").includes("text/html");
+    if (r.ok && !html) return local;
+  } catch { /* 로컬 없음 → CDN */ }
+  return cdn;
+}
 
 type Emit = (s: SignalEvent) => void;
 
@@ -58,15 +72,20 @@ export class SignalCapture {
   }
 
   async init() {
-    const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
+    const [wasmBase, faceModel, poseModel] = await Promise.all([
+      firstReachable(WASM_LOCAL, `${WASM_LOCAL}/vision_wasm_internal.js`, WASM_CDN),
+      firstReachable(FACE_MODEL_LOCAL, FACE_MODEL_LOCAL, FACE_MODEL_CDN),
+      firstReachable(POSE_MODEL_LOCAL, POSE_MODEL_LOCAL, POSE_MODEL_CDN),
+    ]);
+    const fileset = await FilesetResolver.forVisionTasks(wasmBase);
     this.face = await FaceLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: FACE_MODEL, delegate: "GPU" },
+      baseOptions: { modelAssetPath: faceModel, delegate: "GPU" },
       runningMode: "VIDEO",
       outputFaceBlendshapes: true,
       numFaces: 1,
     });
     this.pose = await PoseLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: POSE_MODEL, delegate: "GPU" },
+      baseOptions: { modelAssetPath: poseModel, delegate: "GPU" },
       runningMode: "VIDEO",
       numPoses: 1,
     });

@@ -57,12 +57,12 @@
       상태 머신(idle→gesture→idle), fidelity 열화(playbackRate 0.9~1.0, opacity, CSS 글리치),
       클립이 아직 없으므로 자리표시 클립은 단색+텍스트로 생성해 두고 경로만 규약화
       (`/clips/{state}.webm`).
-- [ ] **P4 두뇌 연결**: brain/persona.ts — 기존 second-dinner/bridge/persona.py 의 시스템 프롬프트를
+- [x] **P4 두뇌 연결**: brain/persona.ts — 기존 second-dinner/bridge/persona.py 의 시스템 프롬프트를
       이식. Anthropic SDK(서버 경유) 또는 로컬 프록시. 최근 MirrorEvent 3건 요약을 프롬프트에 주입.
       STT 는 브라우저 Web Speech API 로 시작하고, 전시 셋업에서 로컬 Whisper 로 교체.
-- [ ] **P5 브리지**: server/bridge.ts — WebSocket 허브. 페이지가 Action/MirrorEvent 를 publish,
+- [x] **P5 브리지**: server/bridge.ts — WebSocket 허브. 페이지가 Action/MirrorEvent 를 publish,
       UE(또는 mock)가 subscribe. 기존 파이썬 mock_unreal 과 포트/어휘 호환(선택: OSC 게이트웨이).
-- [ ] **P6 세션 모드**: 키오스크 풀스크린, 세션 타이머(관객 1인 12~15분), 세션 종료 시
+- [x] **P6 세션 모드**: 키오스크 풀스크린, 세션 타이머(관객 1인 12~15분), 세션 종료 시
       경험 수집 설문(친밀감/불편함/호기심/거리감/이해받음 5축) 로컬 JSON 저장.
 
 ## 규약

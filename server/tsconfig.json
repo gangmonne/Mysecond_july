@@ -12,5 +12,6 @@
       "@contract/*": ["../contract/*"]
     }
   },
-  "include": [".", "../contract"]
+  "include": [".", "../contract"],
+  "exclude": ["node_modules", "sessions"]
 }
