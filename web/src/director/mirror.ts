@@ -54,6 +54,17 @@ export const DEFAULT_MIRROR_CONFIG: MirrorConfig = {
 
 const MIRRORABLE: ReadonlySet<Signal> = new Set(["frown", "smile", "reach_hand", "lean_in", "head_tilt"]);
 
+/** 운영자 모니터가 읽는 디렉터 실시간 상태 */
+export interface DirectorSnapshot {
+  fired: number;
+  cap: number;
+  speaking: boolean;
+  deferred: number;
+  gaze: GazeTarget;
+  globalCooldownLeftMs: number;
+  pending: { gesture: Gesture; inMs: number; fidelity: number }[];
+}
+
 export interface DirectorEvents {
   /** 지연이 끝나 실제로 몸이 움직이는 순간 */
   onMirror: (m: MirrorEvent) => void;
@@ -72,7 +83,8 @@ export class MirrorDirector {
   private lastFireAt = 0;
   private lastPerGesture = new Map<Gesture, number>();
   private fired = 0;
-  private pending = new Map<Gesture, ReturnType<typeof setTimeout>>();
+  private pending = new Map<Gesture, { timer: ReturnType<typeof setTimeout>; fireAt: number; m: MirrorEvent }>();
+  private currentGaze: GazeTarget = "face";
   private speaking = false; // 뇌가 발화 중이면 몸짓을 뒤로 미룬다
   private deferred: MirrorEvent[] = [];
   private chewingSince = 0;
@@ -101,6 +113,7 @@ export class MirrorDirector {
   ingest(s: SignalEvent) {
     if (s.signal === "chewing") return this.handleChewing(s);
     if (s.signal === "gone") {
+      this.currentGaze = "away";
       this.ev.onGazeHint?.("away", "관객이 자리를 비웠다");
       return;
     }
@@ -133,7 +146,7 @@ export class MirrorDirector {
     const m: MirrorEvent = { kind: "mirror", gesture: g, source_t: now, delay_ms: delay, fidelity };
 
     this.ev.onDecision?.(`${g}: 예약 — ${(delay / 1000).toFixed(1)}초 뒤, ${Math.round(fidelity * 100)}% 만큼만`);
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       this.pending.delete(g);
       if (this.speaking) {
         this.deferred.push(m);
@@ -142,7 +155,7 @@ export class MirrorDirector {
       }
       this.fire(m);
     }, delay);
-    this.pending.set(g, t);
+    this.pending.set(g, { timer, fireAt: now + delay, m });
   }
 
   private fire(m: MirrorEvent, note?: string) {
@@ -163,12 +176,29 @@ export class MirrorDirector {
     if (now - this.chewingSince > 6000) {
       this.chewingSince = now;
       const target: GazeTarget = this.rng() < 0.62 ? "plate" : "face";
+      this.currentGaze = target;
       this.ev.onGazeHint?.(target, "관객이 씹고 있다 — 지켜본다");
     }
   }
 
+  /** 운영자 모니터용 — 지금 세컨의 몸이 어디까지 왔는지 스냅샷 (오디언스에겐 안 보인다) */
+  snapshot(now = Date.now()): DirectorSnapshot {
+    const globalCooldownLeft = Math.max(0, this.cfg.globalCooldownMs - (now - this.lastFireAt));
+    return {
+      fired: this.fired,
+      cap: this.cfg.sessionCap,
+      speaking: this.speaking,
+      deferred: this.deferred.length,
+      gaze: this.currentGaze,
+      globalCooldownLeftMs: this.lastFireAt ? globalCooldownLeft : 0,
+      pending: [...this.pending.values()]
+        .map((p) => ({ gesture: p.m.gesture, inMs: Math.max(0, p.fireAt - now), fidelity: p.m.fidelity }))
+        .sort((a, b) => a.inMs - b.inMs),
+    };
+  }
+
   dispose() {
-    for (const t of this.pending.values()) clearTimeout(t);
+    for (const p of this.pending.values()) clearTimeout(p.timer);
     this.pending.clear();
   }
 }

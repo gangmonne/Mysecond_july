@@ -12,6 +12,7 @@ export class BridgeClient {
   constructor(
     private url: string = defaultUrl(),
     private onStatus?: (line: string) => void,
+    private onState?: (up: boolean) => void,
   ) {}
 
   connect() {
@@ -24,9 +25,13 @@ export class BridgeClient {
     }
     this.ws.onopen = () => {
       this.retryMs = 1000;
+      this.onState?.(true);
       this.onStatus?.(`브리지 연결 — ${this.url}`);
     };
-    this.ws.onclose = () => this.scheduleRetry();
+    this.ws.onclose = () => {
+      this.onState?.(false);
+      this.scheduleRetry();
+    };
     this.ws.onerror = () => this.ws?.close();
   }
 

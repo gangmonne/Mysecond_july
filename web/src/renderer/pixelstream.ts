@@ -15,7 +15,12 @@ export class PixelStreamRenderer implements Renderer {
   private speakingCb: (s: boolean) => void = () => {};
   private up = false;
 
-  constructor(root: HTMLElement, signallingUrl: string, private onDown?: () => void) {
+  constructor(
+    root: HTMLElement,
+    signallingUrl: string,
+    private onDown?: () => void,
+    private onUp?: () => void,
+  ) {
     const config = new Config({
       initialSettings: {
         ss: signallingUrl,
@@ -27,7 +32,7 @@ export class PixelStreamRenderer implements Renderer {
       },
     });
     this.stream = new PixelStreaming(config, { videoElementParent: root });
-    this.stream.addEventListener("playStream", () => { this.up = true; });
+    this.stream.addEventListener("playStream", () => { this.up = true; this.onUp?.(); });
     this.stream.addEventListener("webRtcDisconnected", () => {
       if (!this.up) return;
       this.up = false;
