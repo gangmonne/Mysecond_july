@@ -1,7 +1,8 @@
 {
   "_comment": "몸(body) 소스 매핑. body=spatial 이면 3D 형상(mesh 또는 코드 점군), clip 이면 FMV(poster+clips). Higgsfield 로 만든 플레이스홀더(동양인 여성·안경). CDN URL 은 임시라 만료될 수 있으니 로컬 구동 전 `npm run assets:fetch` 로 public/clips/ 에 받아 경로를 고정하라. 전시에선 UE 스캔/시퀀서 자산으로 교체.",
   "body": "spatial",
-  "mesh": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/143bcff8-8873-4193-b3fa-3407637cc9a9.glb",
+  "mesh": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/fbfcd264-8c27-49ce-a438-76d180d991ca.glb",
+  "mesh_alt_unrigged": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/143bcff8-8873-4193-b3fa-3407637cc9a9.glb",
   "poster": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_111557_b4d118b6-44b6-4d43-8cb8-e596b20e1703.png",
   "clips": {
     "idle_a": "https://d8j0ntlcm91z4.cloudfront.net/user_3FRSK6JkivWVnEgpRsMMrXkmAOw/hf_20260715_112135_a79d50a2-a5f3-42f8-a94a-a73a56c333bd.mp4",

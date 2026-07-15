@@ -38,12 +38,31 @@ async function firstReachable(local: string, probe: string, cdn: string): Promis
 
 type Emit = (s: SignalEvent) => void;
 
+/**
+ * 연속 표정 프레임 (~15fps) — 이산 신호(SignalEvent)와 별개의 실시간 채널.
+ * 프레임 픽셀은 담지 않는다. blendshape 요약과 머리 자세 근사만.
+ * spatial 몸의 표정 연동(라이브/지연 재생)에 쓰인다.
+ */
+export interface FaceFrame {
+  t: number;      // epoch ms
+  jaw: number;    // jawOpen 0..1
+  smile: number;  // mouthSmileLeft/Right 평균
+  brow: number;   // browDownLeft/Right 평균 (찡그림)
+  browUp: number; // browInnerUp
+  blink: number;  // eyeBlinkLeft/Right 평균
+  yaw: number;    // 머리 좌우 (라디안 근사, +왼쪽)
+  pitch: number;  // 머리 상하 (라디안 근사, +아래)
+  roll: number;   // 머리 기울임 (라디안)
+}
+type EmitFace = (f: FaceFrame) => void;
+
 interface Sustain { since: number; active: boolean }
 const sustain = (): Sustain => ({ since: 0, active: false });
 
 export class SignalCapture {
   private video: HTMLVideoElement;
   private emit: Emit;
+  private emitFace?: EmitFace;
   private face?: FaceLandmarker;
   private pose?: PoseLandmarker;
   private raf = 0;
@@ -66,9 +85,10 @@ export class SignalCapture {
   // reach
   private lastReach = 0;
 
-  constructor(video: HTMLVideoElement, emit: Emit) {
+  constructor(video: HTMLVideoElement, emit: Emit, emitFace?: EmitFace) {
     this.video = video;
     this.emit = emit;
+    this.emitFace = emitFace;
   }
 
   async init() {
@@ -128,12 +148,35 @@ export class SignalCapture {
       this.gateSustain("smile", t, avg(bs, "mouthSmileLeft", "mouthSmileRight"), 0.5, 300, this.sSmile);
       this.detectChewing(t, bs.get("jawOpen") ?? 0);
       this.detectTilt(t, fr!.faceLandmarks[0]);
+      this.emitFace?.(this.faceFrame(t, bs, fr!.faceLandmarks[0]));
     }
     if (faceBox) this.detectLean(t, faceBox.w);
 
     const pr = this.pose?.detectForVideo(this.video, vts);
     const p = pr?.landmarks?.[0];
     if (p) this.detectReach(t, p);
+  }
+
+  /** blendshape 요약 + 눈선/코끝 기반 머리 자세 근사 → FaceFrame */
+  private faceFrame(t: number, bs: Map<string, number>, lm: { x: number; y: number }[]): FaceFrame {
+    const r = lm[33], l = lm[263], nose = lm[1];
+    let yaw = 0, pitch = 0, roll = 0;
+    if (r && l && nose) {
+      roll = Math.atan2(l.y - r.y, l.x - r.x);
+      const cx = (r.x + l.x) / 2, cy = (r.y + l.y) / 2;
+      const d = Math.hypot(l.x - r.x, l.y - r.y) || 1e-3;
+      yaw = ((nose.x - cx) / d) * 1.2;            // 근사 — 정면 0, 좌우 ±
+      pitch = ((nose.y - cy) / d - 0.62) * 1.2;   // 코끝은 평시 눈선보다 아래(≈0.62d)
+    }
+    return {
+      t,
+      jaw: bs.get("jawOpen") ?? 0,
+      smile: avg(bs, "mouthSmileLeft", "mouthSmileRight"),
+      brow: avg(bs, "browDownLeft", "browDownRight"),
+      browUp: bs.get("browInnerUp") ?? 0,
+      blink: avg(bs, "eyeBlinkLeft", "eyeBlinkRight"),
+      yaw, pitch, roll,
+    };
   }
 
   /** 임계 초과가 ms 이상 지속되면 1회 방출 (내려갈 때 리셋) */

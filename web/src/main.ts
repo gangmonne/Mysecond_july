@@ -13,7 +13,7 @@
  *               ?stream=ws://host:8888  UE Pixel Streaming 시그널링 (없으면 클립뱅크)
  */
 import type { SignalEvent, Signal } from "@contract/contract";
-import { SignalCapture } from "./capture/signals";
+import { SignalCapture, type FaceFrame } from "./capture/signals";
 import { MirrorDirector } from "./director/mirror";
 import { mulberry32 } from "./director/rng";
 import { ClipBankRenderer, type Renderer, type ClipManifest } from "./renderer/clipbank";
@@ -127,6 +127,9 @@ const mirrorNotes: string[] = []; // 최근 거울 이력 — 뇌 프롬프트�
 const director = new MirrorDirector({}, seed, {
   onMirror: (m) => {
     renderer.mirror(m);
+    // 그 몸짓을 하던 순간의 표정을 — 이제서야, fidelity 만큼만 — 재생한다
+    const snip = gestureSnips.get(m.gesture);
+    if (snip) spatialBody()?.replayExpression(snip, m.fidelity);
     bridge.publish(m);
     cinematic.setMood("gesture");
     setTimeout(() => cinematic.setMood(speakingNow ? "talk" : "idle"), 2200);
@@ -190,10 +193,31 @@ async function onUtterance(text: string) {
 /* ── 캡처(P1): 웹캠 → SignalEvent. 프레임은 감지 즉시 버려진다 ── */
 const overlay = new SignalOverlay(stage);
 
+/* ── 표정 채널 (P2.5): FaceFrame 링버퍼 + 몸짓 순간의 스니펫 보관 ──
+   라이브 직결(?live=1)은 리허설 전용이다 — 본 세션의 표정은 거울 이벤트가
+   발화할 때, 그 몸짓을 하던 순간의 스니펫을 뒤늦게 열화시켜 재생한다. */
+const liveMode = params.get("live") === "1";
+const faceRing: FaceFrame[] = [];
+const gestureSnips = new Map<string, FaceFrame[]>();
+
+function onFaceFrame(f: FaceFrame) {
+  faceRing.push(f);
+  while (faceRing.length && f.t - faceRing[0].t > 4000) faceRing.shift();
+  if (liveMode) spatialBody()?.expression(f, 1);
+}
+
+/** 지금 몸이 형상(3D)이면 그 표정 API 를 돌려준다 */
+function spatialBody(): SpatialRenderer | null {
+  return renderer instanceof SpatialRenderer ? renderer : null;
+}
+
 /** capture 와 리허설 훅이 공유하는 신호 입구 */
 function emitSignal(s: SignalEvent) {
   overlay.note(s);
   monitor.signal(s);
+  // 몸짓이 감지된 그 순간의 표정 1.6초를 보관 — 나중에 거울이 이걸 재생한다
+  const snip = faceRing.filter((f) => f.t > s.t - 1600);
+  if (snip.length) gestureSnips.set(s.signal, snip);
   director.ingest(s);
 }
 
@@ -210,7 +234,7 @@ async function startCapture(): Promise<SignalCapture> {
   });
   camVideo.srcObject = stream;
   await camVideo.play();
-  const capture = new SignalCapture(camVideo, emitSignal);
+  const capture = new SignalCapture(camVideo, emitSignal, onFaceFrame);
   log("감지 모델 로딩 중…");
   await capture.init();
   capture.start();
@@ -306,5 +330,18 @@ if (import.meta.env.DEV) {
     signal: (g: Signal) => emitSignal({ signal: g, t: Date.now(), strength: 0.85 }),
     monitor: () => monitor.toggle(),
     tuning: () => tuning.toggle(),
+    /** 가짜 표정 프레임 주입 — 마이크·웹캠 없이 표정 채널을 시험한다 */
+    face: (jaw = 0.6, smile = 0, brow = 0) =>
+      onFaceFrame({ t: Date.now(), jaw, smile, brow, browUp: 0, blink: 0, yaw: 0, pitch: 0, roll: 0 }),
+    /** 스니펫 없이도 재생을 시험한다: 합성 찡그림 1.2초를 fidelity 로 재생 */
+    replay: (fidelity = 0.5) => {
+      const t0 = Date.now();
+      const frames: FaceFrame[] = Array.from({ length: 18 }, (_, i) => ({
+        t: t0 + i * 66, jaw: 0, smile: 0, browUp: 0, blink: 0,
+        brow: Math.sin((i / 17) * Math.PI) * 0.9,
+        yaw: 0, pitch: Math.sin((i / 17) * Math.PI) * 0.12, roll: 0,
+      }));
+      spatialBody()?.replayExpression(frames, fidelity);
+    },
   };
 }

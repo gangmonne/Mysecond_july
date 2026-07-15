@@ -49,11 +49,16 @@ npm run dev
 
 ### 몸(body) — 세 가지
 
-- **spatial (기본)** `renderer/spatial.ts` — 3D 형상. `manifest.mesh`(Higgsfield image_to_3d 스캔
-  GLB)가 있으면 그 머리를, 없으면 **코드로 만든 점군 두상**을 어둠 속에 세운다. 외부 파일이
-  전혀 없어도 뜨므로 "file not found" 로 화면이 비지 않는다. gaze 는 목의 회전, 발화는 얼굴
-  진동, fidelity 열화는 형상의 흔들림·탈색으로 표현된다. **나중에 웹캠 blendshape → 표정
-  실시간 연동**을 얹기에 평면 영상보다 자연스럽다.
+- **spatial (기본)** `renderer/spatial.ts` — 3D 형상. `manifest.mesh`(Higgsfield image_to_3d
+  **리깅+텍스처** GLB)가 있으면 그 머리를 세우고 jaw/head 본을 찾아 표정을 본으로 구동한다.
+  없으면 **코드로 만든 점군 두상**(턱이 분리돼 있어 실제로 벌어진다)을 어둠 속에 세운다.
+  외부 파일이 전혀 없어도 뜨므로 "file not found" 로 화면이 비지 않는다.
+  gaze 는 목의 회전, 발화는 턱의 진동, fidelity 열화는 형상의 흔들림·탈색.
+
+  **표정 채널**: capture 가 이산 신호와 별개로 FaceFrame(blendshape 요약 + 머리 자세, ~15fps)을
+  흘린다. 몸짓이 감지된 순간의 표정 1.6초가 보관되고, 거울 이벤트가 발화할 때 그 스니펫이
+  **뒤늦게, fidelity 만큼의 진폭으로, 열화될수록 더 느리게** 재생된다 — 표정마저 늦은 복제다.
+  `?live=1`(리허설 전용)이면 웹캠 표정이 실시간 직결된다. 본 세션에선 쓰지 않는다.
 - **clip** `renderer/clipbank.ts` — FMV. `manifest.poster`(초상)가 얼굴로 깔리고 상태별 클립이
   그 위에서 크로스페이드. `?body=clip`.
 - **pixelstream** `renderer/pixelstream.ts` — UE5 메타휴먼(전시 본선). `?stream=`. 끊기면 폴백.

@@ -50,6 +50,7 @@ cd web && npm run dev        # http://localhost:5173  ← 브라우저에서 이
 | `?body=spatial` | 3D 형상 몸 (기본) · `?body=clip` 이면 FMV 영상 몸 |
 | `?stream=ws://host:8888` | UE Pixel Streaming(전시 본선). 끊기면 자동 폴백 |
 | `?monitor=1` | 감독 모니터를 열고 시작 |
+| `?live=1` | **리허설 전용**: 웹캠 표정을 형상에 실시간 직결 (본 세션에선 금지 — 정확한 미러링은 실패다) |
 
 ## 5) 리허설 훅 (마이크·웹캠 없이)
 
@@ -59,4 +60,6 @@ cd web && npm run dev        # http://localhost:5173  ← 브라우저에서 이
 __second.say("맛있어?")          // 세컨이 한 문장 발화 (자막이 허공에 흩어진다)
 __second.signal("reach_hand")     // 관객 몸짓 신호를 흘려넣기 (거울 반응 유도)
 __second.monitor()                // 감독 모니터 토글
+__second.face(0.9, 0, 0.5)        // 가짜 표정 프레임 (jaw, smile, brow) — ?live=1 이면 즉시 얼굴에
+__second.replay(0.4)              // 합성 찡그림 스니펫을 fidelity 0.4 로 지연 재생
 ```
