@@ -42,6 +42,10 @@ export class TuningPanel {
     this.el.style.display = this.el.style.display === "none" ? "block" : "none";
   }
 
+  isOpen() {
+    return this.el.style.display !== "none";
+  }
+
   private build() {
     this.section("이음새 조정 [t]");
 

@@ -152,23 +152,39 @@ const tuning = new TuningPanel(stage, (cfg) => {
   director.setConfig(cfg);
   log(`이음새 조정 — 상한 ${cfg.sessionCap}회, 전역 쿨다운 ${cfg.globalCooldownMs / 1000}s`);
 });
+/* ── 모니터를 여는 법 — 화면에 실제로 보이는 버튼 + 단축키 + URL ──
+   ① 하단 컨트롤 바 버튼(마우스 움직이면 뜬다)  ② 시작 화면 '감독 모니터 열기' 버튼
+   ③ m / t 키   ④ ?monitor=1                버튼을 눌러도, 아무것도 몰라도 열린다. */
+const controls = document.getElementById("controls")!;
+const ctlMonitor = document.getElementById("ctlMonitor") as HTMLButtonElement;
+const ctlTuning = document.getElementById("ctlTuning") as HTMLButtonElement;
+const peekMonitor = document.getElementById("peekMonitor") as HTMLButtonElement;
+const hint = document.getElementById("hint")!;
+
+function syncControls() {
+  ctlMonitor.classList.toggle("active", document.body.classList.contains("monitor"));
+  ctlTuning.classList.toggle("active", tuning.isOpen());
+}
+ctlMonitor.onclick = () => { monitor.toggle(); syncControls(); };
+ctlTuning.onclick = () => { tuning.toggle(); syncControls(); };
+peekMonitor.onclick = () => { monitor.toggle(); syncControls(); };
+
 window.addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLInputElement) return;
-  if (e.key === "t") tuning.toggle();
-  if (e.key === "m") monitor.toggle();
+  if (e.key === "t") { tuning.toggle(); syncControls(); }
+  if (e.key === "m") { monitor.toggle(); syncControls(); }
 });
+if (params.get("monitor") === "1") { monitor.toggle(); syncControls(); }
 
-// 모니터를 여는 방법 3가지 — 키보드가 없어도, 단축키를 몰라도 열 수 있게:
-//  1) [m] 키   2) URL 에 ?monitor=1   3) 좌상단 구석을 클릭 (관객은 눈치채지 못한다)
-if (params.get("monitor") === "1") monitor.toggle();
-const hotCorner = document.createElement("div");
-Object.assign(hotCorner.style, {
-  position: "absolute", left: "0", top: "0", width: "28px", height: "28px",
-  zIndex: "40", cursor: "default",
-});
-hotCorner.title = "감독 모니터 (m)";
-hotCorner.onclick = () => monitor.toggle();
-stage.appendChild(hotCorner);
+// 컨트롤 바: 영상 플레이어처럼 — 움직이면 뜨고, 가만있으면 사라진다 (관객 세션 땐 숨는다)
+let hideT = 0;
+function showControls() {
+  controls.classList.add("show");
+  clearTimeout(hideT);
+  hideT = window.setTimeout(() => controls.classList.remove("show"), 2800);
+}
+stage.addEventListener("pointermove", showControls);
+stage.addEventListener("pointerdown", showControls);
 
 /* ── 대화 채널(P4): STT → persona → 자막 + 몸 ── */
 let thinking = false;
@@ -304,6 +320,12 @@ begin.onclick = async () => {
   startTimer(endAt);
   log(`세션 시작 — ${durationMin}분, seed ${seed}`);
 
+  // 모니터가 있다는 걸 알린다: 컨트롤 바를 잠깐 띄우고 안내 토스트를 한 번
+  showControls();
+  hint.textContent = "감독 모니터: 화면을 움직이면 아래 버튼이 뜹니다 · 또는 m 키 · 다른 기기는 :8787/monitor";
+  hint.classList.add("show");
+  setTimeout(() => hint.classList.remove("show"), 5200);
+
   // 대화 채널
   stt = startSTT(
     (text) => void onUtterance(text),
@@ -323,7 +345,7 @@ begin.onclick = async () => {
     });
 };
 
-log("대기 중 — [앉기] 를 누르면 웹캠 권한을 요청합니다. [t] 이음새 조정 · [m] 감독 모니터.");
+log("대기 중 — [앉기] 로 시작. 감독 모니터: 화면 움직여 아래 버튼 · m 키 · 다른 기기는 :8787/monitor.");
 
 /* 리허설 훅 (dev 빌드에만 존재) — 마이크/웹캠 없이 대사·신호를 흘려 넣어본다.
    콘솔에서: __second.say("맛있어?") / __second.signal("reach_hand") / __second.monitor() */

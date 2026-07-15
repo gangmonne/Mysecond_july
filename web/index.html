@@ -129,6 +129,39 @@
       #envelope .t { color: var(--faint); margin-right: 8px; }
       body.monitor #envelope { display: block; }
       body.monitor #stage { cursor: default; }
+
+      /* 시작 화면의 보조 버튼 — 앉기 아래, 더 조용하게 */
+      #privacy .ghost {
+        margin-top: 2px; padding: 8px 20px; font-size: 11px; letter-spacing: 0.24em;
+        text-indent: 0.24em; border-color: #241f1a; color: var(--dim);
+      }
+
+      /* ── 운영자 컨트롤 바 — 영상 플레이어처럼: 마우스 움직이면 뜨고 가만있으면 사라진다.
+            관객 세션 중엔 마우스가 안 움직이므로 보이지 않는다. ── */
+      #controls {
+        position: absolute; left: 50%; bottom: 3.5vh; transform: translateX(-50%) translateY(6px);
+        z-index: 14; display: flex; gap: 8px; padding: 6px;
+        background: rgba(6, 5, 4, 0.82); border: 1px solid #241f1a; border-radius: 999px;
+        backdrop-filter: blur(4px); opacity: 0; pointer-events: none;
+        transition: opacity 420ms ease, transform 420ms ease;
+      }
+      #controls.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+      #controls button {
+        background: none; border: 1px solid transparent; border-radius: 999px; cursor: pointer;
+        color: var(--ink); font-size: 12px; letter-spacing: 0.14em; padding: 7px 16px;
+        font-family: inherit; transition: border-color 240ms ease, background 240ms ease;
+      }
+      #controls button:hover { border-color: #3a332b; background: rgba(140, 128, 114, 0.08); }
+      #controls button.active { border-color: var(--dim); color: #fff; }
+
+      /* 세션 시작 직후 한 번 뜨는 안내 토스트 */
+      #hint {
+        position: absolute; left: 50%; bottom: 10vh; transform: translateX(-50%);
+        z-index: 15; padding: 9px 18px; border-radius: 999px; pointer-events: none;
+        background: rgba(6, 5, 4, 0.86); border: 1px solid #241f1a; color: var(--dim);
+        font-size: 12px; letter-spacing: 0.06em; opacity: 0; transition: opacity 600ms ease;
+      }
+      #hint.show { opacity: 1; }
     </style>
   </head>
   <body>
@@ -145,7 +178,13 @@
             찡그림, 웃음, 손 뻗기 같은 신호만 남습니다.
           </p>
           <button id="begin">앉기</button>
+          <button id="peekMonitor" class="ghost">감독 모니터 열기</button>
         </div>
+        <div id="controls">
+          <button id="ctlMonitor">◉ 감독 모니터</button>
+          <button id="ctlTuning">이음새 조정</button>
+        </div>
+        <div id="hint"></div>
       </div>
       <div id="envelope" aria-label="행동 봉투"></div>
     </div>
