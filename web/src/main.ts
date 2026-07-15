@@ -310,6 +310,9 @@ begin.onclick = async () => {
     (line) => { log(line); monitor.setStt(line.replace(/^stt\s*/, "").slice(0, 22)); },
   );
 
+  // 원격 감독 모니터로 상태를 흘린다 — 다른 기기에서 http://<PC>:8787/monitor 로 본다
+  setInterval(() => bridge.publish(monitor.publicState()), 500);
+
   // 자율신경 채널 — 뒷단에서 붙는다. 실패해도 세션은 대화만으로 계속된다
   void startCapture()
     .then((c) => { capture = c; monitor.setCamera(true); })

@@ -80,6 +80,20 @@ export class SessionMonitor {
     if (this.signals.length > 6) this.signals.pop();
   }
 
+  /** 원격 모니터(브리지 /monitor 페이지)로 보낼 상태 묶음 */
+  publicState() {
+    return {
+      kind: "monitor" as const,
+      t: Date.now(),
+      session: this.session,
+      channels: this.channels,
+      speaking: this.speaking,
+      lastSay: this.lastSay,
+      signals: this.signals.slice(0, 4),
+      director: this.getSnapshot(),
+    };
+  }
+
   private render() {
     const now = Date.now();
     const snap = this.getSnapshot();
