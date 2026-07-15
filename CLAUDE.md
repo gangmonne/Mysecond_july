@@ -48,12 +48,12 @@
 
 - [x] **P0 셋업**: `web/` 를 Vite + TypeScript 로 초기화. `@mediapipe/tasks-vision` 설치.
       contract.ts 를 web/src 와 server 가 공유하도록 tsconfig paths 설정.
-- [ ] **P1 캡처**: capture/signals.ts 완성 — FaceLandmarker(blendshapes) + PoseLandmarker 를
+- [x] **P1 캡처**: capture/signals.ts 완성 — FaceLandmarker(blendshapes) + PoseLandmarker 를
       ~15fps 로 돌리고 SignalEvent 를 방출. 디버그 오버레이(감지된 신호를 화면 구석에 소문자로).
-- [ ] **P2 디렉터**: director/mirror.ts 는 이미 구현돼 있다(핵심 로직 완성). 튜닝 UI(config 슬라이더:
+- [x] **P2 디렉터**: director/mirror.ts 는 이미 구현돼 있다(핵심 로직 완성). 튜닝 UI(config 슬라이더:
       ignoreProb / delay 범위 / fidelity 범위 / cooldown)를 붙여라. 기존 웹 프로토타입의
       '이음새 조정' 탭과 같은 문법.
-- [ ] **P3 클립 뱅크 렌더러**: renderer/clipbank.ts 완성 — 이중 video 레이어 크로스페이드,
+- [x] **P3 클립 뱅크 렌더러**: renderer/clipbank.ts 완성 — 이중 video 레이어 크로스페이드,
       상태 머신(idle→gesture→idle), fidelity 열화(playbackRate 0.9~1.0, opacity, CSS 글리치),
       클립이 아직 없으므로 자리표시 클립은 단색+텍스트로 생성해 두고 경로만 규약화
       (`/clips/{state}.webm`).

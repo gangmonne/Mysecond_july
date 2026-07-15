@@ -39,9 +39,12 @@ export class ClipBankRenderer implements Renderer {
   private state: State = { kind: "idle" };
   private speakingCb: (s: boolean) => void = () => {};
   private queue: (() => void)[] = [];
+  private rng: () => number;
 
-  constructor(root: HTMLElement) {
+  /** rng: 시드 가능한 난수 (규약 — idle 클립 선택까지 재현 가능해야 한다) */
+  constructor(root: HTMLElement, rng: () => number = Math.random) {
     this.root = root;
+    this.rng = rng;
     root.style.position = "relative";
     this.layers = [document.createElement("video"), document.createElement("video")] as const as [
       HTMLVideoElement, HTMLVideoElement,
@@ -112,7 +115,8 @@ export class ClipBankRenderer implements Renderer {
 
   private idle() {
     this.state = { kind: "idle" };
-    const pick = IDLES[Math.floor(Math.random() * IDLES.length)];
+    delete this.root.dataset.glitch; // 몸짓이 끝나면 열화도 가라앉는다
+    const pick = IDLES[Math.floor(this.rng() * IDLES.length)];
     this.play(pick, { loop: true });
   }
 
