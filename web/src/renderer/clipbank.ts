@@ -32,6 +32,10 @@ export interface Renderer {
 export interface ClipManifest {
   poster?: string;
   clips?: Record<string, string>;
+  /** 기본 몸: "clip"(FMV) | "spatial"(3D 형상). ?body= 로 덮어쓸 수 있다 */
+  body?: "clip" | "spatial";
+  /** spatial 몸이 쓸 GLB 메시(URL/경로). 없으면 코드 점군 두상으로 폴백 */
+  mesh?: string;
 }
 
 type State =

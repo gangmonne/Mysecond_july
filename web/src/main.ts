@@ -18,6 +18,7 @@ import { MirrorDirector } from "./director/mirror";
 import { mulberry32 } from "./director/rng";
 import { ClipBankRenderer, type Renderer, type ClipManifest } from "./renderer/clipbank";
 import { PixelStreamRenderer } from "./renderer/pixelstream";
+import { SpatialRenderer, webglAvailable } from "./renderer/spatial";
 import { respond, SECOND_PROFILE } from "./brain/persona";
 import { startSTT, type STTHandle } from "./brain/stt";
 import { BridgeClient } from "./net/bridge";
@@ -77,24 +78,43 @@ function onSpeaking(s: boolean) {
   monitor.setSpeaking(s, currentSay);
 }
 
-/* ── 몸: PixelStream(전시 본선, ?stream=) → 죽으면 클립뱅크로 폴백 ── */
+/* ── 몸 선택 ──
+   ?stream= → 픽셀 스트림(전시 본선, 끊기면 폴백)
+   그 외    → ?body= 또는 manifest.body: "spatial"(3D 형상) | "clip"(FMV, 기본) */
 let renderer: Renderer = streamUrl
   ? new PixelStreamRenderer(
       bodyEl, streamUrl,
       () => {
         monitor.setStream("down");
-        log("픽셀 스트림 끊김 — 클립뱅크로 폴백 (세컨은 죽지 않는다)");
+        log("픽셀 스트림 끊김 — 폴백 (세컨은 죽지 않는다)");
         bodyEl.replaceChildren();
-        renderer = makeClipBank();
+        renderer = makeBody();
       },
       () => monitor.setStream("up"),
     )
-  : makeClipBank();
+  : makeBody();
 if (streamUrl) renderer.setSpeakingListener(onSpeaking);
+
+/** ?body= / manifest.body 에 따라 형상(3D) 또는 클립뱅크(FMV) 몸을 만든다 */
+function makeBody(): Renderer {
+  const want = params.get("body") ?? clipManifest.body ?? "clip";
+  if (want === "spatial" && webglAvailable()) {
+    try {
+      const r = new SpatialRenderer(bodyEl, clipManifest.mesh);
+      r.setSpeakingListener(onSpeaking);
+      log(`몸: 형상(3D)${clipManifest.mesh ? " — 스캔 메시" : " — 점군 폴백"}`);
+      return r;
+    } catch (e) {
+      log(`형상 렌더 실패 — 클립뱅크로 (${errMsg(e)})`);
+    }
+  }
+  return makeClipBank();
+}
 
 function makeClipBank(): Renderer {
   const r = new ClipBankRenderer(bodyEl, mulberry32(seed ^ 0x9e3779b9), clipManifest);
   r.setSpeakingListener(onSpeaking);
+  log(clipManifest.poster ? "몸: 클립뱅크 (포스터 얼굴)" : "몸: 클립뱅크 (자리표시)");
   return r;
 }
 
@@ -134,6 +154,18 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "t") tuning.toggle();
   if (e.key === "m") monitor.toggle();
 });
+
+// 모니터를 여는 방법 3가지 — 키보드가 없어도, 단축키를 몰라도 열 수 있게:
+//  1) [m] 키   2) URL 에 ?monitor=1   3) 좌상단 구석을 클릭 (관객은 눈치채지 못한다)
+if (params.get("monitor") === "1") monitor.toggle();
+const hotCorner = document.createElement("div");
+Object.assign(hotCorner.style, {
+  position: "absolute", left: "0", top: "0", width: "28px", height: "28px",
+  zIndex: "40", cursor: "default",
+});
+hotCorner.title = "감독 모니터 (m)";
+hotCorner.onclick = () => monitor.toggle();
+stage.appendChild(hotCorner);
 
 /* ── 대화 채널(P4): STT → persona → 자막 + 몸 ── */
 let thinking = false;
@@ -246,7 +278,7 @@ begin.onclick = async () => {
   setTimeout(() => { privacy.style.display = "none"; }, 1400);
   cinematic.enter();
   startTimer(endAt);
-  log(`세션 시작 — ${durationMin}분, seed ${seed}, 몸: ${streamUrl ? "픽셀 스트림" : "클립뱅크"}`);
+  log(`세션 시작 — ${durationMin}분, seed ${seed}`);
 
   // 대화 채널
   stt = startSTT(

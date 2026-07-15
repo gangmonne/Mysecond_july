@@ -22,16 +22,19 @@ npm run dev
 - URL 파라미터: `?seed=` 난수 시드(리허설 재현) · `?min=` 세션 길이(분, 기본 13) · `?stream=ws://host:8888` UE 시그널링(없으면 클립뱅크)
 - 세션 종료 설문(5축)은 `server/sessions/*.json` 으로, 브리지가 없으면 localStorage 로 남는다.
 
-## 모니터링 (운영자용)
+## 실행 & 모니터링
 
-오디언스 화면은 순수하게 시네마틱하게 유지된다. 운영자는 키로 별도 패널을 연다:
+빠른 실행/모니터링 안내는 **[RUN.md](./RUN.md)** 를 본다 (설치·자산 받기·"file not found" 해결 포함).
 
-- `[m]` **감독 모니터** — 세션이 지금 어디까지 왔는지 실시간으로:
-  경과/남은 시간 · 거울 발화 수(상한 8 대비) · 준비 중인 몸짓과 카운트다운 ·
-  전역 쿨다운 · 채널 상태(cam / bridge / stream / stt) · 방금 읽은 신호 ·
-  그리고 하단에 '행동 봉투' 결정 로그("찡그림: 무시 — 봤다. 못 본 척했다").
+오디언스 화면은 순수하게 시네마틱하게 유지된다. 운영자는 **감독 모니터**를 3가지 방법으로 연다:
+**`[m]` 키** · 주소에 **`?monitor=1`** · **좌상단 구석 클릭**(관객은 눈치 못 챈다).
+
+모니터에 실시간 표시: 경과/남은 시간 · 거울 발화 수(상한 8 대비) · 준비 중인 몸짓과 카운트다운 ·
+전역 쿨다운 · 채널 상태(cam / bridge / stream / stt) · 방금 읽은 신호 · 하단에 '행동 봉투'
+결정 로그("찡그림: 무시 — 봤다. 못 본 척했다").
+
 - `[t]` **이음새 조정** — 무시 확률 / 지연 배율 / 열화 범위 / 쿨다운 / 세션 상한 라이브 튜닝.
-- 리허설 훅(dev 빌드에서만): 콘솔에 `__second.say("맛있어?")` · `__second.signal("reach_hand")` ·
+- 리허설 훅(dev): 콘솔에 `__second.say("맛있어?")` · `__second.signal("reach_hand")` ·
   `__second.monitor()` — 마이크·웹캠 없이 대사와 몸짓을 흘려 넣어본다.
 - 브리지가 켜져 있으면 `sessions/*.json` 이 쌓인다 — 세션별 설문 결과가 곧 진행 기록이다.
 
@@ -44,9 +47,21 @@ npm run dev
 세컨의 말은 자막으로 고정되지 않는다 — 허공에 흐릿하게 맺혔다, 한 단어씩 위로 흩어지며
 증발한다 (**휘발되는 언어**, `ui/words.ts`). 읽히는 순간과 사라지는 순간이 겹친다.
 
-몸의 플레이스홀더는 `web/public/clips/manifest.json` 의 `poster`(현재 Higgsfield 로 만든
-동양인 여성·안경 초상)로 즉시 깔리고, idle 브리딩 루프 영상이 그 위에서 돈다. 클립이 없거나
-로드 실패하면 포스터로 물러난다. 전시에선 UE 메타휴먼 클립으로 교체한다.
+### 몸(body) — 세 가지
+
+- **spatial (기본)** `renderer/spatial.ts` — 3D 형상. `manifest.mesh`(Higgsfield image_to_3d 스캔
+  GLB)가 있으면 그 머리를, 없으면 **코드로 만든 점군 두상**을 어둠 속에 세운다. 외부 파일이
+  전혀 없어도 뜨므로 "file not found" 로 화면이 비지 않는다. gaze 는 목의 회전, 발화는 얼굴
+  진동, fidelity 열화는 형상의 흔들림·탈색으로 표현된다. **나중에 웹캠 blendshape → 표정
+  실시간 연동**을 얹기에 평면 영상보다 자연스럽다.
+- **clip** `renderer/clipbank.ts` — FMV. `manifest.poster`(초상)가 얼굴로 깔리고 상태별 클립이
+  그 위에서 크로스페이드. `?body=clip`.
+- **pixelstream** `renderer/pixelstream.ts` — UE5 메타휴먼(전시 본선). `?stream=`. 끊기면 폴백.
+
+플레이스홀더 자산은 Higgsfield 로 만든 동양인 여성·안경 초상 → idle 루프 → 3D 메시.
+`npm run assets:fetch` 로 로컬 고정한다. 전시에선 UE 스캔/메타휴먼으로 교체.
+
+> hi-fi 본선은 여전히 UE Pixel Streaming 이다 (CLAUDE.md). three.js spatial 은 리허설/웹 배포용 몸.
 
 - 전시 준비: `web/public/models/README.md` (MediaPipe 모델 로컬 배치), `web/public/clips/README.md` (클립 규약), `unreal/PIXELSTREAM.md` (UE 셋업)
 
