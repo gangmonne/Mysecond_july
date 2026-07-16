@@ -35,6 +35,10 @@ export const DEFAULT_MIRROR_CONFIG: MirrorConfig = {
   ignoreProb: {
     frown: 0.85,
     smile: 0.9,
+    surprised: 0.7,   // 놀람은 드물고 정직한 신호 — 조금 더 응한다
+    pout: 0.8,
+    nod: 0.92,        // 끄덕임은 흔하다 — 거의 무시
+    shake: 0.75,
     reach_hand: 0.45, // 손을 뻗는 건 드문 일이니까, 세컨도 조금 더 응한다
     lean_in: 0.8,
     head_tilt: 0.85,
@@ -42,6 +46,10 @@ export const DEFAULT_MIRROR_CONFIG: MirrorConfig = {
   delayRange: {
     frown: [6000, 18000],
     smile: [8000, 20000],
+    surprised: [3000, 9000],
+    pout: [7000, 18000],
+    nod: [4000, 12000],
+    shake: [4000, 12000],
     reach_hand: [2500, 7000],
     lean_in: [4000, 12000],
     head_tilt: [5000, 15000],
@@ -52,7 +60,9 @@ export const DEFAULT_MIRROR_CONFIG: MirrorConfig = {
   sessionCap: 8,
 };
 
-const MIRRORABLE: ReadonlySet<Signal> = new Set(["frown", "smile", "reach_hand", "lean_in", "head_tilt"]);
+const MIRRORABLE: ReadonlySet<Signal> = new Set([
+  "frown", "smile", "surprised", "pout", "nod", "shake", "reach_hand", "lean_in", "head_tilt",
+]);
 
 /** 운영자 모니터가 읽는 디렉터 실시간 상태 */
 export interface DirectorSnapshot {
@@ -204,5 +214,9 @@ export class MirrorDirector {
 }
 
 function labelKo(g: Gesture): string {
-  return { frown: "찡그림", smile: "웃음", reach_hand: "손 뻗기", lean_in: "몸 기울이기", head_tilt: "고개 기울이기" }[g];
+  return {
+    frown: "찡그림", smile: "웃음", surprised: "놀람", pout: "시무룩",
+    nod: "끄덕임", shake: "도리질",
+    reach_hand: "손 뻗기", lean_in: "몸 기울이기", head_tilt: "고개 기울이기",
+  }[g];
 }

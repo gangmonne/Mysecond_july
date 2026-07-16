@@ -164,5 +164,9 @@ function dot(on: boolean) { return on ? "●" : "○"; }
 function streamDot(s: StreamState) { return s === "up" ? "●" : s === "down" ? "✕" : "○"; }
 function trunc(s: string, n: number) { return s.length > n ? s.slice(0, n) + "…" : s; }
 function labelKo(g: string): string {
-  return ({ frown: "찡그림", smile: "웃음", reach_hand: "손 뻗기", lean_in: "몸 기울이기", head_tilt: "고개 기울이기" } as Record<string, string>)[g] ?? g;
+  return ({
+    frown: "찡그림", smile: "웃음", surprised: "놀람", pout: "시무룩",
+    nod: "끄덕임", shake: "도리질",
+    reach_hand: "손 뻗기", lean_in: "몸 기울이기", head_tilt: "고개 기울이기",
+  } as Record<string, string>)[g] ?? g;
 }

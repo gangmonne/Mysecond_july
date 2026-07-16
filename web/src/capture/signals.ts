@@ -73,6 +73,12 @@ export class SignalCapture {
   private sFrown = sustain();
   private sSmile = sustain();
   private sTilt = sustain();
+  private sSurprise = sustain();
+  private sPout = sustain();
+  // nod/shake: 머리 자세 시계열 (FaceFrame 의 yaw/pitch 재사용)
+  private poseHist: { t: number; yaw: number; pitch: number }[] = [];
+  private lastNod = 0;
+  private lastShake = 0;
   // chewing: jawOpen 시계열
   private jawHist: { t: number; v: number }[] = [];
   private lastChewEmit = 0;
@@ -146,15 +152,49 @@ export class SignalCapture {
     if (bs.size) {
       this.gateSustain("frown", t, avg(bs, "browDownLeft", "browDownRight"), 0.45, 400, this.sFrown);
       this.gateSustain("smile", t, avg(bs, "mouthSmileLeft", "mouthSmileRight"), 0.5, 300, this.sSmile);
+      // 놀람: 눈썹이 위로 + 입이 벌어짐 (씹는 중 오탐을 줄이려 둘 다 요구)
+      const browUp = bs.get("browInnerUp") ?? 0;
+      const surprise = browUp > 0.5 && (bs.get("jawOpen") ?? 0) > 0.25 ? browUp : 0;
+      this.gateSustain("surprised", t, surprise, 0.3, 250, this.sSurprise);
+      // 시무룩: 입꼬리가 내려간 채 유지
+      this.gateSustain("pout", t, avg(bs, "mouthFrownLeft", "mouthFrownRight"), 0.35, 600, this.sPout);
       this.detectChewing(t, bs.get("jawOpen") ?? 0);
       this.detectTilt(t, fr!.faceLandmarks[0]);
-      this.emitFace?.(this.faceFrame(t, bs, fr!.faceLandmarks[0]));
+      const frame = this.faceFrame(t, bs, fr!.faceLandmarks[0]);
+      this.detectNodShake(t, frame.yaw, frame.pitch);
+      this.emitFace?.(frame);
     }
     if (faceBox) this.detectLean(t, faceBox.w);
 
     const pr = this.pose?.detectForVideo(this.video, vts);
     const p = pr?.landmarks?.[0];
     if (p) this.detectReach(t, p);
+  }
+
+  /** 끄덕임/도리질 — 1.6초 창에서 pitch/yaw 가 평균선을 3회 이상 오가면 */
+  private detectNodShake(t: number, yaw: number, pitch: number) {
+    this.poseHist.push({ t, yaw, pitch });
+    this.poseHist = this.poseHist.filter((h) => t - h.t < 1600);
+    if (this.poseHist.length < 10) return;
+    const check = (vals: number[], amp: number) => {
+      const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
+      const spread = Math.max(...vals) - Math.min(...vals);
+      if (spread < amp) return 0;
+      let cross = 0;
+      for (let i = 1; i < vals.length; i++) {
+        if ((vals[i - 1] - mean) * (vals[i] - mean) < 0) cross++;
+      }
+      return cross;
+    };
+    const pitchCross = check(this.poseHist.map((h) => h.pitch), 0.09);
+    const yawCross = check(this.poseHist.map((h) => h.yaw), 0.12);
+    if (pitchCross >= 3 && pitchCross > yawCross && t - this.lastNod > 6000) {
+      this.lastNod = t;
+      this.emit({ signal: "nod", t, strength: Math.min(1, pitchCross / 5) });
+    } else if (yawCross >= 3 && yawCross > pitchCross && t - this.lastShake > 6000) {
+      this.lastShake = t;
+      this.emit({ signal: "shake", t, strength: Math.min(1, yawCross / 5) });
+    }
   }
 
   /** blendshape 요약 + 눈선/코끝 기반 머리 자세 근사 → FaceFrame */

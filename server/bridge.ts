@@ -19,6 +19,34 @@ const PORT = Number(process.env.PORT ?? 8787);
 const MODEL = process.env.SECOND_MODEL ?? "claude-sonnet-5";
 const API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const OSC_UDP_PORT = Number(process.env.OSC_UDP_PORT ?? 0);
+// 로컬 LLM (Ollama) — API 키가 없거나 실패하면 여기로 폴백. `ollama pull <모델>` 후 자동 감지.
+const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://127.0.0.1:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2";
+
+/** Ollama /api/chat — 안 떠 있으면 null (조용히 다음 폴백으로) */
+async function askOllama(system: string, user: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        stream: false,
+        options: { num_predict: 300, temperature: 0.9 },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!r.ok) return null;
+    const data = (await r.json()) as { message?: { content?: string } };
+    return data.message?.content ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function say(line: string) {
   process.stdout.write(`[bridge ${new Date().toISOString().slice(11, 19)}] ${line}\n`);
@@ -53,26 +81,33 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && req.url === "/api/second") {
-      if (!API_KEY) return json(res, 503, { error: "no_api_key — ANTHROPIC_API_KEY 를 설정하세요" });
+      // 뇌 체인: ① Anthropic(키 있으면) → ② 로컬 LLM(Ollama, 떠 있으면) → ③ 503(페이지가 규칙 기반 폴백)
       const { system, user } = JSON.parse(await readBody(req)) as { system: string; user: string };
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 400,
-          system,
-          messages: [{ role: "user", content: user }],
-        }),
-      });
-      if (!r.ok) return json(res, 502, { error: `anthropic ${r.status}: ${await r.text()}` });
-      const data = (await r.json()) as { content: { type: string; text?: string }[] };
-      const text = data.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
-      return json(res, 200, { text });
+      if (API_KEY) {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: MODEL,
+            max_tokens: 400,
+            system,
+            messages: [{ role: "user", content: user }],
+          }),
+        });
+        if (r.ok) {
+          const data = (await r.json()) as { content: { type: string; text?: string }[] };
+          const text = data.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("");
+          return json(res, 200, { text, brain: "anthropic" });
+        }
+        say(`anthropic ${r.status} — 로컬 LLM 폴백 시도`);
+      }
+      const local = await askOllama(system, user);
+      if (local !== null) return json(res, 200, { text: local, brain: "ollama" });
+      return json(res, 503, { error: "no_brain — ANTHROPIC_API_KEY 를 설정하거나 Ollama 를 켜세요 (페이지는 규칙 기반으로 계속됩니다)" });
     }
 
     if (req.method === "POST" && req.url === "/api/survey") {
@@ -153,7 +188,7 @@ function encodeOsc(addr: string, args: (string | number)[]): Buffer {
 }
 
 server.listen(PORT, () => {
-  say(`http/ws 허브 기동 — :${PORT} (모델 ${MODEL}${API_KEY ? "" : ", 키 없음 → /api/second 503"}${OSC_UDP_PORT ? `, osc→udp:${OSC_UDP_PORT}` : ""})`);
+  say(`http/ws 허브 기동 — :${PORT} (뇌: ${API_KEY ? `anthropic ${MODEL} → ` : ""}ollama ${OLLAMA_MODEL} 폴백${OSC_UDP_PORT ? `, osc→udp:${OSC_UDP_PORT}` : ""})`);
   say(`감독 모니터 — http://localhost:${PORT}/monitor (같은 와이파이의 다른 기기에선 http://<이 PC IP>:${PORT}/monitor)`);
 });
 
@@ -201,7 +236,7 @@ li{padding:2px 0}
 </div>
 <script>
 const $=id=>document.getElementById(id);
-const KO={frown:"찡그림",smile:"웃음",reach_hand:"손 뻗기",lean_in:"몸 기울이기",head_tilt:"고개 기울이기"};
+const KO={frown:"찡그림",smile:"웃음",surprised:"놀람",pout:"시무룩",nod:"끄덕임",shake:"도리질",reach_hand:"손 뻗기",lean_in:"몸 기울이기",head_tilt:"고개 기울이기"};
 let last=null, lastAt=0;
 function mmss(ms){ms=Math.max(0,ms|0);const s=(ms/1000)|0;return (s/60|0)+":"+String(s%60).padStart(2,"0")}
 function dot(on){return on?"●":"○"}

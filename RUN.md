@@ -22,7 +22,16 @@ npm start
 
 이게 알아서 설치하고 **화면(:5173)** 과 **감독 모니터(:8787)** 를 함께 띄운다.
 켜지면 터미널에 **열어야 할 주소가 찍힌다** — 거기 나온 `http://localhost:5173` 을 브라우저로 열면 된다.
-멈추려면 그 터미널에서 **Ctrl+C**. (Claude 응답을 쓰려면 `ANTHROPIC_API_KEY=sk-... npm start` 처럼 키를 앞에 붙인다.)
+멈추려면 그 터미널에서 **Ctrl+C**.
+
+### 세컨이 진짜로 대답하게 하기 (관람객 말 → 세컨 응답)
+
+듣기(STT)는 브라우저에 내장돼 있어 그냥 된다(Chrome, 마이크 허용). **대답의 뇌**는 셋 중 하나 — 위에서부터 시도하고 안 되면 자동 폴백:
+
+1. **Claude API**: `ANTHROPIC_API_KEY=sk-... npm start` 처럼 키를 앞에 붙여 켠다. (제일 좋은 대사)
+2. **로컬 LLM (Ollama, 무료·오프라인)**: https://ollama.com 설치 → 터미널에서 `ollama pull llama3.2`
+   → 그냥 `npm start`. 브리지가 자동 감지한다. (다른 모델: `OLLAMA_MODEL=qwen2.5 npm start`)
+3. **규칙 기반 폴백**: 아무것도 없으면 내장된 짧은 대사들로 계속된다. 세션은 절대 안 죽는다.
 
 > 🔴 **"localhost 에서 연결을 거부했습니다 (ERR_CONNECTION_REFUSED)"** 는
 > **서버가 안 켜졌다**는 뜻이다. 브라우저를 열기 전에 위 `npm start` 가 먼저 돌고 있어야 하고,

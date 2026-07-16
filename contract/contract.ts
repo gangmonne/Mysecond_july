@@ -11,6 +11,10 @@ export const EMOTIONS = ["neutral", "amused_dry", "warm", "cold", "sulking", "ti
 export const SIGNALS = [
   "frown",      // 찡그림
   "smile",      // 웃음
+  "surprised",  // 놀람 (눈썹 위로 + 입 벌어짐)
+  "pout",       // 시무룩 (입꼬리 내려감)
+  "nod",        // 끄덕임
+  "shake",      // 도리질 (고개 가로젓기)
   "reach_hand", // 손을 뻗음 (화면/세컨 쪽으로)
   "lean_in",    // 몸을 기울여 다가옴
   "head_tilt",  // 고개 기울임
@@ -19,7 +23,10 @@ export const SIGNALS = [
 ] as const;
 
 /** 세컨이 실제로 따라 할 수 있는 몸짓 (renderer 가 소비) */
-export const GESTURES = ["frown", "smile", "reach_hand", "lean_in", "head_tilt"] as const;
+export const GESTURES = [
+  "frown", "smile", "surprised", "pout", "nod", "shake",
+  "reach_hand", "lean_in", "head_tilt",
+] as const;
 
 export type GazeTarget = (typeof GAZE_TARGETS)[number];
 export type GazeCurve = (typeof GAZE_CURVES)[number];

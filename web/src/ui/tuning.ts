@@ -10,8 +10,9 @@ import { GESTURES, type Gesture } from "@contract/contract";
 import { DEFAULT_MIRROR_CONFIG, type MirrorConfig } from "../director/mirror";
 
 const GESTURE_KO: Record<Gesture, string> = {
-  frown: "찡그림", smile: "웃음", reach_hand: "손 뻗기",
-  lean_in: "몸 기울이기", head_tilt: "고개 기울이기",
+  frown: "찡그림", smile: "웃음", surprised: "놀람", pout: "시무룩",
+  nod: "끄덕임", shake: "도리질",
+  reach_hand: "손 뻗기", lean_in: "몸 기울이기", head_tilt: "고개 기울이기",
 };
 
 export class TuningPanel {
