@@ -63,7 +63,8 @@ export class ClipBankRenderer implements Renderer {
     this.root = root;
     this.rng = rng;
     this.manifest = manifest;
-    root.style.position = "relative";
+    // 이미 absolute(inset:0)로 배치된 root 를 relative 로 덮으면 높이가 0으로 붕괴한다
+    if (getComputedStyle(root).position === "static") root.style.position = "relative";
 
     // 포스터 — 클립이 없어도 몸엔 얼굴이 있다. 영상 레이어가 그 위를 덮는다
     if (manifest.poster) {
