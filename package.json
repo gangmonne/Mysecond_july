@@ -1,0 +1,11 @@
+{
+  "name": "second-dinner-live",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "세컨과의 식사 — LIVE. 원클릭 실행: npm start",
+  "scripts": {
+    "start": "node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs"
+  }
+}
