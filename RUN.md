@@ -2,15 +2,29 @@
 
 ## 설치 없이 브라우저로 바로 보기
 
-- **데모 (지금 바로):** claude.ai Artifact 로 배포된 자율 데모가 있다 — 웹캠·마이크 없이
-  가상의 관객으로 돌며, 무시/지연/열화 미러링·휘발되는 자막·감독 모니터를 그대로 보여준다.
-  (이 세션의 대화에서 링크 확인. 페이지의 공유 메뉴로 남에게도 공유 가능.)
-- **Vercel 로 진짜 앱 배포 (3클릭, 무료):** 레포에 `vercel.json` 이 들어 있어서 설정이 필요 없다.
-  1. https://vercel.com 로그인(GitHub 계정으로)
-  2. **Add New → Project** → `gangmonne/Mysecond_july` 선택 (Import)
-  3. 아무것도 바꾸지 말고 **Deploy** → 1~2분 뒤 `https://<프로젝트명>.vercel.app` 이 나온다
-  - Vercel 배포본은 HTTPS 라 **웹캠·음성(STT)이 실제로 동작**한다. 단 브리지/Claude 프록시(:8787)는
-    포함되지 않으므로 세컨의 대사는 규칙 기반 폴백으로 나온다 (전시 본선은 로컬 PC 에서 npm start).
+### GitHub Pages — 빌드는 이미 끝나 있다. 스위치 한 번만.
+
+`main` 에 푸시될 때마다 GitHub Actions 가 앱을 빌드하고 얼굴·영상·3D 메시를 사이트에 구워 넣어
+**`gh-pages` 브랜치**로 올린다(자동). 남은 건 **서빙 켜기 한 번** — 저장소 소유자만 할 수 있다:
+
+1. https://github.com/gangmonne/Mysecond_july/settings/pages 로 간다
+2. **Build and deployment → Source: Deploy from a branch**
+3. **Branch: `gh-pages`** / **`/ (root)`** 선택 → **Save**
+4. 1~2분 뒤 라이브: **https://gangmonne.github.io/Mysecond_july/**
+
+한 번 켜두면 이후엔 `main` 에 푸시할 때마다 자동으로 다시 배포된다.
+HTTPS 라 **웹캠·음성(STT)·3D 메시가 실제로 동작**한다. (브리지/Claude 프록시는 배포에 없으므로
+세컨의 대사는 규칙 기반 폴백. 진짜 대답은 로컬 PC 에서 `npm start` + API 키 또는 Ollama.)
+
+### 그냥 미리 보기 (설정도 필요 없음)
+
+claude.ai Artifact 로 배포된 자율 데모 — 웹캠·마이크 없이 가상의 관객으로 돌며, 무시/지연/열화
+미러링·휘발되는 자막·감독 모니터를 보여준다. (외부 파일 로딩이 막힌 환경이라 몸은 점군 형상.)
+
+### Vercel 대안 (3클릭)
+
+레포에 `vercel.json` 이 있어 설정 불필요: vercel.com 로그인 → Add New → Project →
+`gangmonne/Mysecond_july` Import → Deploy → `https://<이름>.vercel.app`.
 
 ## 딱 한 줄로 켜기
 
