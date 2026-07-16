@@ -1,8 +1,10 @@
-name: Deploy to GitHub Pages
+name: Build & publish to gh-pages
 
-# main 에 푸시될 때마다 웹 앱을 빌드해 GitHub Pages 로 배포한다.
+# main 에 푸시되면 웹 앱을 빌드해 gh-pages 브랜치로 밀어넣는다.
 # CI 러너는 인터넷이 열려 있어 Higgsfield CDN 의 얼굴/영상/3D 메시를 받아
 # 사이트에 같은-출처 파일로 구워 넣는다 (CORS·링크 만료 문제 제거).
+# 이 워크플로는 Pages '활성화'를 요구하지 않는다 — 브랜치만 만든다.
+# 서빙은 저장소 Settings → Pages → Source: Deploy from a branch → gh-pages / (root) 한 번.
 
 on:
   push:
@@ -10,50 +12,42 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Install
         working-directory: web
         run: npm install
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       - name: Vendor generated assets (face / idle / 3D mesh)
         working-directory: web
         run: npm run assets:fetch || echo "assets:fetch 일부 실패 — 런타임 폴백으로 계속"
       - name: Build
         working-directory: web
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          BASE_PATH: /Mysecond_july/
         run: npm run build
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Add .nojekyll and 404 fallback
+        run: |
+          touch web/dist/.nojekyll
+          cp web/dist/index.html web/dist/404.html
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: web/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: web/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "deploy: ${{ github.sha }}"
