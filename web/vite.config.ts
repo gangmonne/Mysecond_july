@@ -22,6 +22,12 @@ export default defineConfig({
       // server/bridge.ts (포트 8787) — 브리지가 없어도 페이지는 동작한다
       "/api": "http://localhost:8787",
       "/ws": { target: "ws://localhost:8787", ws: true },
+      // 3D 메시(GLB)는 fetch 로 받아서 CORS 가 필요하다 — 같은 출처로 프록시해 우회
+      "/cdn3d": {
+        target: "https://d3u0tzju9qaucj.cloudfront.net",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/cdn3d/, ""),
+      },
     },
   },
 });

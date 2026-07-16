@@ -100,7 +100,7 @@ function makeBody(): Renderer {
   const want = params.get("body") ?? clipManifest.body ?? "clip";
   if (want === "spatial" && webglAvailable()) {
     try {
-      const r = new SpatialRenderer(bodyEl, clipManifest.mesh);
+      const r = new SpatialRenderer(bodyEl, clipManifest.mesh, log);
       r.setSpeakingListener(onSpeaking);
       log(`몸: 형상(3D)${clipManifest.mesh ? " — 스캔 메시" : " — 점군 폴백"}`);
       return r;

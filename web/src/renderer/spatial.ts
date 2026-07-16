@@ -68,7 +68,7 @@ export class SpatialRenderer implements Renderer {
   private boneJawRest?: THREE.Quaternion;
   private boneHeadRest?: THREE.Quaternion;
 
-  constructor(private root: HTMLElement, mesh?: string) {
+  constructor(private root: HTMLElement, mesh?: string, private onStatus?: (line: string) => void) {
     const w = root.clientWidth || 1280;
     const h = root.clientHeight || 720;
 
@@ -144,9 +144,16 @@ export class SpatialRenderer implements Renderer {
         this.skull = undefined;
         this.jawGroup = undefined;
         this.head.add(obj);
+        this.onStatus?.(
+          `스캔 메시 로드 완료 — ${url.split("/").pop()}` +
+          (this.boneJaw || this.boneHead ? ` (본: ${[this.boneJaw && "jaw", this.boneHead && "head"].filter(Boolean).join("/")})` : " (본 없음 — 머리 전체로 구동)"),
+        );
       },
       undefined,
-      () => { /* 로드 실패 — 폴백 점군을 그대로 둔다 */ },
+      (err) => {
+        // 로드 실패 — 폴백 점군을 그대로 둔다. 왜 실패했는지는 반드시 남긴다 (CORS/만료/404)
+        this.onStatus?.(`스캔 메시 로드 실패 — 점군으로 계속 (${err instanceof Error ? err.message : "CORS 또는 링크 만료 가능"})`);
+      },
     );
   }
 
