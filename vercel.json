@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd web && npm install",
-  "buildCommand": "cd web && npm run build",
-  "outputDirectory": "web/dist",
-  "rewrites": [
-    { "source": "/cdn3d/:path*", "destination": "https://d3u0tzju9qaucj.cloudfront.net/:path*" }
-  ]
+  "buildCommand": "cd web && npm run assets:fetch && npm run build",
+  "outputDirectory": "web/dist"
 }

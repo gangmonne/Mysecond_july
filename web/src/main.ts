@@ -13,6 +13,7 @@
  *               ?stream=ws://host:8888  UE Pixel Streaming 시그널링 (없으면 클립뱅크)
  */
 import type { SignalEvent, Signal } from "@contract/contract";
+import { withBase } from "./base";
 import { SignalCapture, type FaceFrame } from "./capture/signals";
 import { MirrorDirector } from "./director/mirror";
 import { mulberry32 } from "./director/rng";
@@ -58,8 +59,14 @@ export function log(line: string) {
 const clipManifest: ClipManifest = await loadManifest();
 async function loadManifest(): Promise<ClipManifest> {
   try {
-    const r = await fetch("/clips/manifest.json", { signal: AbortSignal.timeout(3000) });
-    return r.ok ? ((await r.json()) as ClipManifest) : {};
+    const r = await fetch(withBase("/clips/manifest.json"), { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) return {};
+    const m = (await r.json()) as ClipManifest;
+    // 절대경로 자산(/clips/…, /cdn3d/…)을 배포 베이스에 맞춰 접두한다
+    if (m.poster) m.poster = withBase(m.poster);
+    if (m.mesh) m.mesh = withBase(m.mesh);
+    if (m.clips) for (const k of Object.keys(m.clips)) m.clips[k] = withBase(m.clips[k]);
+    return m;
   } catch {
     return {};
   }

@@ -15,14 +15,15 @@
 
 import { FaceLandmarker, PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import type { SignalEvent, Signal } from "@contract/contract";
+import { withBase } from "../base";
 
-/* 전시장 인터넷을 신뢰하지 않는다 — 로컬(public/) 우선, CDN 은 폴백 */
-const WASM_LOCAL = "/vendor/mediapipe-wasm"; // postinstall 이 npm 패키지에서 복사
+/* 전시장 인터넷을 신뢰하지 않는다 — 로컬(public/) 우선, CDN 은 폴백. 배포 베이스 접두. */
+const WASM_LOCAL = withBase("/vendor/mediapipe-wasm"); // postinstall 이 npm 패키지에서 복사
 const WASM_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-const FACE_MODEL_LOCAL = "/models/face_landmarker.task";
+const FACE_MODEL_LOCAL = withBase("/models/face_landmarker.task");
 const FACE_MODEL_CDN =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const POSE_MODEL_LOCAL = "/models/pose_landmarker_lite.task";
+const POSE_MODEL_LOCAL = withBase("/models/pose_landmarker_lite.task");
 const POSE_MODEL_CDN =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 

@@ -24,7 +24,7 @@ await mkdir(clipsDir, { recursive: true });
 const seen = new Map(); // url → 로컬 경로 (같은 URL 은 한 번만 받는다)
 let count = 0;
 
-/** URL 이면 받아서 로컬 상대경로(/clips/…)를 돌려준다. 아니면 그대로. */
+/** URL 이면 받아서 로컬 상대경로(/clips/…)를 돌려준다. 실패하면 원본 URL 유지(빌드 안 깨짐). */
 async function localize(url, hint) {
   if (typeof url !== "string" || !/^https?:\/\//.test(url)) return url;
   if (seen.has(url)) return seen.get(url);
@@ -32,15 +32,22 @@ async function localize(url, hint) {
   const name = `${hint}${ext}`;
   const dest = path.join(clipsDir, name);
   process.stdout.write(`↓ ${hint}${ext}  … `);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  await writeFile(dest, buf);
-  process.stdout.write(`${(buf.length / 1024 / 1024).toFixed(1)}MB\n`);
-  const local = `/clips/${name}`;
-  seen.set(url, local);
-  count++;
-  return local;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    await writeFile(dest, buf);
+    process.stdout.write(`${(buf.length / 1024 / 1024).toFixed(1)}MB\n`);
+    const local = `/clips/${name}`;
+    seen.set(url, local);
+    count++;
+    return local;
+  } catch (e) {
+    // 한 자산이 만료·실패해도 빌드는 계속 — 원본 URL 을 남겨 런타임에 다시 시도한다
+    process.stdout.write(`건너뜀 (${e.message})\n`);
+    seen.set(url, url);
+    return url;
+  }
 }
 
 function guessExt(url) {
