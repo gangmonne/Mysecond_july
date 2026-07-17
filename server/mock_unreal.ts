@@ -15,6 +15,7 @@ import WebSocket from "ws";
 const url = process.argv[2] ?? "ws://localhost:8787/ws";
 const counts: Record<string, number> = {};
 let faceLast: Record<string, number> | null = null;
+let blinkFrames = 0; // blink>0.05 인 프레임 누적 — 깜빡임은 150ms 라 요약에 잘 안 걸린다
 
 function stamp() {
   return new Date().toISOString().slice(11, 19);
@@ -39,6 +40,7 @@ ws.on("message", (data) => {
     console.log(`[${stamp()}] GAZE    → ${m.target}`);
   } else if (kind === "face") {
     faceLast = m as Record<string, number>; // 고빈도라 개별 출력 대신 1초 요약
+    if ((faceLast.blink ?? 0) > 0.05) blinkFrames++;
   } else if (kind === "monitor") {
     // 감독 모니터 상태 — UE 는 무시
   } else {
@@ -51,7 +53,7 @@ setInterval(() => {
   const n = counts.face ?? 0;
   if (!n || !faceLast) return;
   console.log(
-    `[${stamp()}] FACE    ${n}fr 누적 | jaw=${fix(faceLast.jaw)} smile=${fix(faceLast.smile)} brow=${fix(faceLast.brow)} yaw=${fix(faceLast.yaw)} pitch=${fix(faceLast.pitch)}`,
+    `[${stamp()}] FACE    ${n}fr 누적(깜빡임 ${blinkFrames}fr) | jaw=${fix(faceLast.jaw)} smile=${fix(faceLast.smile)} brow=${fix(faceLast.brow)} blink=${fix(faceLast.blink)} yaw=${fix(faceLast.yaw)}`,
   );
 }, 1000);
 

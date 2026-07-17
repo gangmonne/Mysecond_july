@@ -40,6 +40,14 @@ gesture 어휘: frown smile surprised pout nod shake reach_hand lean_in head_til
 → face | plate | away. eyes-lead-head 로 전환.
 
 ### `face` — 연속 표정 프레임 (**≤10fps**, 실시간 동기화의 본체)
+
+**이 피드는 세컨 자신의 합성 얼굴 상태다** (관객의 원시 웹캠 표정이 아니다 — 그건 페이지 밖으로
+나가지 않는다). 웹 셸의 SecondFace 가 합성한다:
+- **립싱크** — 대사의 한글 음절→viseme 트랙 (말하는 만큼 jaw/smile 이 움직인다)
+- **깜빡임** — 2.2~6초 자동, 가끔 두 번 연속 (blink 필드)
+- **지연 표정 재생** — mirror 이벤트 순간의 관객 표정 스니펫 (fidelity 반영, 반전)
+- **미세 부유** — 완전한 정지 없음
+UE 는 이 값을 매핑표대로 꽂기만 하면 메타휴먼이 말하고 깜빡인다.
 ```json
 { "kind":"face", "t":1789..., "jaw":0.34, "smile":0.05, "brow":0.6,
   "browUp":0.0, "blink":0.1, "yaw":-0.12, "pitch":0.08, "roll":0.03 }

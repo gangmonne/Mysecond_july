@@ -221,11 +221,16 @@ export class SpatialRenderer implements Renderer {
 
   /* ── 표정 채널 ── */
 
-  /** 라이브 구동 (리허설 전용) — FaceFrame 을 weight 만큼 얼굴에 얹는다 */
-  expression(f: FaceFrame, weight = 1) {
+  /**
+   * FaceFrame 을 weight 만큼 얼굴에 얹는다.
+   * mirror=true  → 관객 표정 라이브 구동 (리허설 ?live=1, 좌우 반전)
+   * mirror=false → 세컨 자신의 합성 얼굴 (SecondFace — 립싱크·깜빡임·지연재생)
+   */
+  expression(f: FaceFrame, weight = 1, mirror = true) {
+    const s = mirror ? -1 : 1;
     this.exprTgt = {
       jaw: f.jaw, smile: f.smile, brow: f.brow,
-      yaw: -f.yaw, pitch: f.pitch, roll: -f.roll, // 거울이므로 좌우 반전
+      yaw: s * f.yaw, pitch: f.pitch, roll: s * f.roll,
     };
     this.exprWeight = weight;
   }
@@ -287,7 +292,8 @@ export class SpatialRenderer implements Renderer {
     this.yaw += (this.tgtYaw - this.yaw) * 0.05;
     this.pitch += (this.tgtPitch - this.pitch) * 0.05;
     const breath = Math.sin(t * 1.1) * 0.02;
-    const speakJaw = this.speaking ? (Math.sin(t * 26) * 0.5 + 0.5) * 0.35 : 0;
+    // 발화 진동은 폴백만 — 진짜 입 움직임은 SecondFace 의 viseme 트랙이 expr.jaw 로 준다
+    const speakJaw = this.speaking ? (Math.sin(t * 26) * 0.5 + 0.5) * 0.1 : 0;
     const shake = this.agitation * (Math.random() - 0.5) * 0.1;
 
     this.head.rotation.y = this.yaw + this.expr.yaw * 0.8 + Math.sin(t * 0.4) * 0.03 + shake;

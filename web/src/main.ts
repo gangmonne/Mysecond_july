@@ -23,6 +23,8 @@ import { SpatialRenderer, webglAvailable } from "./renderer/spatial";
 import { respond, SECOND_PROFILE } from "./brain/persona";
 import { startSTT, type STTHandle } from "./brain/stt";
 import { speak, shutUp } from "./brain/voice";
+import { koreanVisemes } from "./brain/lipsync";
+import { SecondFace } from "./director/face";
 import { BridgeClient } from "./net/bridge";
 import { SignalOverlay } from "./ui/overlay";
 import { TuningPanel } from "./ui/tuning";
@@ -137,7 +139,7 @@ const director = new MirrorDirector({}, seed, {
     renderer.mirror(m);
     // 그 몸짓을 하던 순간의 표정을 — 이제서야, fidelity 만큼만 — 재생한다
     const snip = gestureSnips.get(m.gesture);
-    if (snip) spatialBody()?.replayExpression(snip, m.fidelity);
+    if (snip) secondFace.replayExpression(snip, m.fidelity);
     bridge.publish(m);
     cinematic.setMood("gesture");
     setTimeout(() => cinematic.setMood(speakingNow ? "talk" : "idle"), 2200);
@@ -210,14 +212,27 @@ async function onUtterance(text: string) {
     renderer.perform(action);
     bridge.publish(action);
     log(`세컨: "${action.say}" (${action.emotion}, 시선 ${action.gaze})`);
+    // 립싱크 — 말하는 만큼 입이 움직인다 (viseme 트랙, 메타휴먼 피드에도 그대로 실림)
+    const estMs = Math.max(1400, action.say.length * 185); // TTS rate 0.9 근사
+    const track = koreanVisemes(action.say, estMs);
+    let spoke = false;
     if (voiceOn) {
       // 말하는 동안 귀를 닫는다 — 자기 목소리를 관객 발화로 듣는 에코 루프 방지
-      const spoke = speak(
+      spoke = speak(
         action.say,
-        () => { stt?.stop(); },
-        () => { setTimeout(() => { stt = startSTT((t) => void onUtterance(t), sttStatus); }, 400); },
+        () => { stt?.stop(); secondFace.speak(track, estMs, action.say.length); },
+        () => {
+          secondFace.stopSpeak();
+          setTimeout(() => { stt = startSTT((t) => void onUtterance(t), sttStatus); }, 400);
+        },
+        (charIndex) => secondFace.syncTo(charIndex), // 실제 발화 위치에 입을 맞춘다
       );
-      if (spoke) log("(목소리 — 웹 TTS. 전시 본선은 UE 오디오)");
+      if (spoke) log("(목소리 — 웹 TTS + 립싱크. 전시 본선은 UE 오디오)");
+    }
+    if (!spoke) {
+      // 소리를 못 내도 입은 움직인다 — 무성의 발화
+      secondFace.speak(track, estMs, action.say.length);
+      setTimeout(() => secondFace.stopSpeak(), estMs + 400);
     }
   } finally {
     thinking = false;
@@ -239,17 +254,25 @@ const liveMode = params.get("live") === "1";
 const faceRing: FaceFrame[] = [];
 const gestureSnips = new Map<string, FaceFrame[]>();
 
-let lastFacePub = 0;
 function onFaceFrame(f: FaceFrame) {
   faceRing.push(f);
   while (faceRing.length && f.t - faceRing[0].t > 4000) faceRing.shift();
   if (liveMode) spatialBody()?.expression(f, 1);
-  // UE 실시간 동기화 피드 — ≤10fps 로 브리지에 흘린다 (unreal/SYNC.md)
-  if (f.t - lastFacePub >= 100) {
-    lastFacePub = f.t;
-    bridge.publish({ kind: "face", ...f });
-  }
+  // 주의: 관객의 원시 표정은 여기 링버퍼에만 산다 — 밖(브리지)으로 나가지 않는다.
 }
+
+/* ── 세컨 자신의 얼굴 (P2.7): 립싱크 + 자동 깜빡임 + 지연재생 합성 ──
+   이 합성 상태가 웹 spatial 몸의 표정이자, UE 로 나가는 실시간 동기화 피드다. */
+const secondFace = new SecondFace(mulberry32(seed ^ 0x51f15e));
+let lastFacePub = 0;
+setInterval(() => {
+  const f = secondFace.tick();
+  if (!liveMode) spatialBody()?.expression(f, 1, false); // 세컨 본인 얼굴 — 반전 없음
+  if (f.t - lastFacePub >= 100) { // UE 피드는 ≤10fps (unreal/SYNC.md)
+    lastFacePub = f.t;
+    bridge.publish(f);
+  }
+}, 66);
 
 /** 지금 몸이 형상(3D)이면 그 표정 API 를 돌려준다 */
 function spatialBody(): SpatialRenderer | null {

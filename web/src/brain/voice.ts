@@ -25,9 +25,15 @@ export function voiceAvailable(): boolean {
 
 /**
  * 한 문장을 소리로. 시작/종료 콜백으로 앱 셸이 STT 를 닫았다 다시 연다.
+ * onBoundary(charIndex)는 립싱크 트랙을 실제 발화 위치에 재동기화하는 데 쓴다.
  * 소리를 못 내면 false — 호출자는 자막만으로 계속한다.
  */
-export function speak(text: string, onStart?: () => void, onEnd?: () => void): boolean {
+export function speak(
+  text: string,
+  onStart?: () => void,
+  onEnd?: () => void,
+  onBoundary?: (charIndex: number) => void,
+): boolean {
   if (!voiceAvailable()) return false;
   pickVoice();
   try {
@@ -40,6 +46,7 @@ export function speak(text: string, onStart?: () => void, onEnd?: () => void): b
     let ended = false;
     const end = () => { if (!ended) { ended = true; onEnd?.(); } };
     u.onstart = () => onStart?.();
+    u.onboundary = (e) => onBoundary?.(e.charIndex ?? 0);
     u.onend = end;
     u.onerror = end;
     // 일부 브라우저에서 onend 유실 대비 — 길이 기반 안전망
