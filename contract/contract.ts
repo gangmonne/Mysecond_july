@@ -70,7 +70,25 @@ export interface SignalEvent {
   strength: number; // 0..1
 }
 
-export type Envelope = Action | MirrorEvent;
+/**
+ * 연속 표정 프레임 — 자율신경 채널의 실시간 피드 (≤10fps 로 브리지 송출).
+ * UE(메타휴먼)가 이걸 구독해 얼굴을 실시간 구동한다. 매핑은 unreal/SYNC.md.
+ * 웹캠 프레임이 아니다 — blendshape 요약과 머리 자세 근사값만.
+ */
+export interface ExpressionFrame {
+  kind: "face";
+  t: number;      // epoch ms
+  jaw: number;    // 0..1  → JawOpen
+  smile: number;  // 0..1  → MouthSmileLeft/Right
+  brow: number;   // 0..1  → BrowDownLeft/Right (찡그림)
+  browUp: number; // 0..1  → BrowInnerUp
+  blink: number;  // 0..1  → EyeBlinkLeft/Right
+  yaw: number;    // rad   → 머리 좌우 (+왼쪽)
+  pitch: number;  // rad   → 머리 상하 (+아래)
+  roll: number;   // rad   → 머리 기울임
+}
+
+export type Envelope = Action | MirrorEvent | ExpressionFrame;
 
 const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, Number(v) || 0));
 

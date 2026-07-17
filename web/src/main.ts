@@ -22,6 +22,7 @@ import { PixelStreamRenderer } from "./renderer/pixelstream";
 import { SpatialRenderer, webglAvailable } from "./renderer/spatial";
 import { respond, SECOND_PROFILE } from "./brain/persona";
 import { startSTT, type STTHandle } from "./brain/stt";
+import { speak, shutUp } from "./brain/voice";
 import { BridgeClient } from "./net/bridge";
 import { SignalOverlay } from "./ui/overlay";
 import { TuningPanel } from "./ui/tuning";
@@ -195,6 +196,7 @@ stage.addEventListener("pointerdown", showControls);
 
 /* ── 대화 채널(P4): STT → persona → 자막 + 몸 ── */
 let thinking = false;
+const voiceOn = params.get("voice") !== "0"; // 기본 켬 — 세컨은 소리로 대답한다
 async function onUtterance(text: string) {
   if (thinking) return; // 생각 중엔 다음 발화를 받지 않는다 — 세컨은 서두르지 않는다
   thinking = true;
@@ -208,9 +210,23 @@ async function onUtterance(text: string) {
     renderer.perform(action);
     bridge.publish(action);
     log(`세컨: "${action.say}" (${action.emotion}, 시선 ${action.gaze})`);
+    if (voiceOn) {
+      // 말하는 동안 귀를 닫는다 — 자기 목소리를 관객 발화로 듣는 에코 루프 방지
+      const spoke = speak(
+        action.say,
+        () => { stt?.stop(); },
+        () => { setTimeout(() => { stt = startSTT((t) => void onUtterance(t), sttStatus); }, 400); },
+      );
+      if (spoke) log("(목소리 — 웹 TTS. 전시 본선은 UE 오디오)");
+    }
   } finally {
     thinking = false;
   }
+}
+
+function sttStatus(line: string) {
+  log(line);
+  monitor.setStt(line.replace(/^stt\s*/, "").slice(0, 22));
 }
 
 /* ── 캡처(P1): 웹캠 → SignalEvent. 프레임은 감지 즉시 버려진다 ── */
@@ -223,10 +239,16 @@ const liveMode = params.get("live") === "1";
 const faceRing: FaceFrame[] = [];
 const gestureSnips = new Map<string, FaceFrame[]>();
 
+let lastFacePub = 0;
 function onFaceFrame(f: FaceFrame) {
   faceRing.push(f);
   while (faceRing.length && f.t - faceRing[0].t > 4000) faceRing.shift();
   if (liveMode) spatialBody()?.expression(f, 1);
+  // UE 실시간 동기화 피드 — ≤10fps 로 브리지에 흘린다 (unreal/SYNC.md)
+  if (f.t - lastFacePub >= 100) {
+    lastFacePub = f.t;
+    bridge.publish({ kind: "face", ...f });
+  }
 }
 
 /** 지금 몸이 형상(3D)이면 그 표정 API 를 돌려준다 */
@@ -287,6 +309,7 @@ function startTimer(endAt: number) {
 async function endSession() {
   capture?.stop();
   stt?.stop();
+  shutUp();
   monitor.setCamera(false);
   director.dispose();
   cinematic.clear();
@@ -334,10 +357,7 @@ begin.onclick = async () => {
   setTimeout(() => hint.classList.remove("show"), 5200);
 
   // 대화 채널
-  stt = startSTT(
-    (text) => void onUtterance(text),
-    (line) => { log(line); monitor.setStt(line.replace(/^stt\s*/, "").slice(0, 22)); },
-  );
+  stt = startSTT((text) => void onUtterance(text), sttStatus);
 
   // 원격 감독 모니터로 상태를 흘린다 — 다른 기기에서 http://<PC>:8787/monitor 로 본다
   setInterval(() => bridge.publish(monitor.publicState()), 500);

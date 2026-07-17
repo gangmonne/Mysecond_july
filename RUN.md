@@ -47,6 +47,19 @@ npm start
    → 그냥 `npm start`. 브리지가 자동 감지한다. (다른 모델: `OLLAMA_MODEL=qwen2.5 npm start`)
 3. **규칙 기반 폴백**: 아무것도 없으면 내장된 짧은 대사들로 계속된다. 세션은 절대 안 죽는다.
 
+세컨은 이제 **소리로도 대답**한다(브라우저 TTS, 기본 켬 — 끄려면 `?voice=0`).
+말하는 동안엔 귀(STT)를 닫아 자기 목소리를 되듣지 않는다.
+
+**브리지 없이(배포 페이지에서) 대화하려면**: Ollama 를 CORS 허용으로 켜고
+(`OLLAMA_ORIGINS=* ollama serve`) 페이지를 `?brain=ollama` 로 연다 —
+gangmonne.github.io 배포본도 그 자리에서 진짜 LLM 과 대화한다. (`&model=qwen2.5` 로 모델 선택)
+
+## UE(언리얼) 실시간 동기화 — 기반 완성
+
+페이지가 브리지로 **연속 표정 피드(face, ≤10fps) + action/mirror/gaze** 를 흘린다.
+UE 는 그걸 구독해 메타휴먼을 구동하면 된다 — 매핑표·수신 규약·메시→메타휴먼 파이프라인은
+**[unreal/SYNC.md](./unreal/SYNC.md)**. 언리얼 없이 검증: `cd server && npm run mock` (가짜 언리얼).
+
 > 🔴 **"localhost 에서 연결을 거부했습니다 (ERR_CONNECTION_REFUSED)"** 는
 > **서버가 안 켜졌다**는 뜻이다. 브라우저를 열기 전에 위 `npm start` 가 먼저 돌고 있어야 하고,
 > 그 **터미널 창을 닫으면 안 된다**(창을 닫으면 서버도 꺼진다). 창을 열어둔 채로 주소를 연다.

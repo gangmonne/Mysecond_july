@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node bridge.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "mock": "node mock_unreal.ts"
   },
   "dependencies": {
     "ws": "^8.18.0"

@@ -35,25 +35,56 @@ function buildSystem(profile: string, memories: string[], mirrorNotes: string[])
   return parts.join("\n\n");
 }
 
+/* 뇌 경로 선택 (?brain=)
+   기본       → 브리지 프록시 /api/second (Anthropic → Ollama 폴백은 서버가)
+   ?brain=ollama      → 페이지가 로컬 Ollama(11434)에 직결 — 브리지 없이도 대화 가능.
+                        Ollama 쪽에 OLLAMA_ORIGINS=* 필요 (RUN.md 참고)
+   ?brain=<url>       → 임의의 {system,user}→{text} 프록시 URL
+   어느 경로든 실패하면 규칙 기반 mock — 세션은 절대 죽지 않는다 */
+const BRAIN = typeof location !== "undefined" ? new URLSearchParams(location.search).get("brain") : null;
+const OLLAMA_MODEL = (typeof location !== "undefined" && new URLSearchParams(location.search).get("model")) || "llama3.2";
+
 export async function respond(
   userText: string,
   profile: string = SECOND_PROFILE,
   memories: string[] = [],
   mirrorNotes: string[] = [],
 ): Promise<Action> {
+  const system = buildSystem(profile, memories, mirrorNotes);
   try {
-    const res = await fetch("/api/second", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ system: buildSystem(profile, memories, mirrorNotes), user: userText }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(`proxy ${res.status}`);
-    const { text } = (await res.json()) as { text: string };
+    const text = await askBrain(system, userText);
     return validateAction(extractJson(text));
   } catch {
     return mock(userText, mirrorNotes);
   }
+}
+
+async function askBrain(system: string, user: string): Promise<string> {
+  if (BRAIN === "ollama") {
+    const res = await fetch("http://127.0.0.1:11434/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL, stream: false,
+        options: { num_predict: 300, temperature: 0.9 },
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!res.ok) throw new Error(`ollama ${res.status}`);
+    const data = (await res.json()) as { message?: { content?: string } };
+    return data.message?.content ?? "";
+  }
+  const url = BRAIN && /^https?:\/\//.test(BRAIN) ? BRAIN : "/api/second";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ system, user }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`proxy ${res.status}`);
+  const { text } = (await res.json()) as { text: string };
+  return text;
 }
 
 /** 모델이 앞뒤에 뭘 붙였어도 첫 JSON 객체만 건진다 */
