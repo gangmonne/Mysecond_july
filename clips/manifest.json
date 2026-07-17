@@ -1,0 +1,10 @@
+{
+  "body": "clip",
+  "mesh": "/clips/mesh.glb",
+  "poster": "/clips/poster.png",
+  "clips": {
+    "idle_a": "/clips/idle_a.mp4",
+    "idle_b": "/clips/idle_a.mp4",
+    "idle_c": "/clips/idle_a.mp4"
+  }
+}
